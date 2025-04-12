@@ -1,0 +1,21 @@
+# Virtual Environment
+venv/
+*.pyc
+__pycache__/
+
+# Instance Folder (if it contains secrets or instance-specific DBs)
+instance/
+# If your DB file is sensitive or large, add it:
+# instance/nce_vocab.db
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Environment files
+.env
+
+# OS-specific files
+.DS_Store
+Thumbs.db

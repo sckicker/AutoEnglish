@@ -1,0 +1,40 @@
+{# app/templates/base.html #}
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}NCE Vocab Quiz{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block head_extra %}{% endblock %}
+</head>
+<body>
+    <header>
+        {# --- 添加链接到标题 --- #}
+        <h1>
+            <a href="{{ url_for('index') }}" style="color: white; text-decoration: none;">
+                新概念英语词汇学习平台
+            </a>
+        </h1>
+        {# --- 链接结束 --- #}
+        </header>
+
+    <main class="container"> {# 将 class="container" 移到 main 标签可能更合适 #}
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <footer>
+        {# 确保 current_time 在上下文中可用 (通过 context_processor 或直接传递) #}
+        {% if current_time %}
+        <p>&copy; {{ current_time.year }} NCE Vocab Project. (请注意《新概念英语》版权)</p>
+        {% else %}
+        <p>NCE Vocab Project. (请注意《新概念英语》版权)</p>
+        {% endif %}
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    {% block scripts_extra %}{% endblock %}
+</body>
+</html>

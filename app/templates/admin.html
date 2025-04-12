@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}管理面板{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>管理面板</h2>
+    <form action="{{ url_for('process_pdf_route') }}" method="POST">
+        <button type="submit">处理 PDF 文件</button>
+    </form>
+    <div id="processing-status"></div>
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const form = document.querySelector('form');
+        const statusDiv = document.getElementById('processing-status');
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            statusDiv.textContent = '正在处理 PDF 文件，请稍候...';
+            try {
+                const response = await fetch(form.action, {
+                    method: form.method
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    statusDiv.textContent = data.message;
+                } else {
+                    statusDiv.textContent = `处理失败: ${data.error || '未知错误'}`;
+                }
+            } catch (error) {
+                statusDiv.textContent = `处理过程中发生错误: ${error.message}`;
+            }
+        });
+    });
+</script>
+{% endblock %}

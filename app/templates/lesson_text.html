@@ -1,0 +1,44 @@
+{# app/templates/lesson_text.html #}
+{% extends "base.html" %} {# 继承基础模板 #}
+
+{# 设置页面标题 #}
+{% block title %}Lesson {{ lesson.lesson_number }} - {{ lesson.title_en or 'Lesson Text' }}{% endblock %}
+
+{% block content %}
+{# 显示课文标题信息 #}
+<h2>Lesson {{ lesson.lesson_number }}: {{ lesson.title_en or 'Unknown Title' }}</h2>
+{% if lesson.title_cn %}
+<h3>{{ lesson.title_cn }}</h3>
+{% endif %}
+<hr>
+
+{# 显示英文课文 #}
+<h3>课文 (Text)</h3>
+<div class="lesson-text english-text" style="line-height: 1.6; margin-bottom: 20px;">
+    {# 使用 safe 过滤器允许 HTML (如果需要)，nl2br 转换换行为 <br> #}
+    {# 假设 text_en 存储时保留了段落间的换行符 #}
+    {% if lesson.text_en %}
+        {{ lesson.text_en | safe }}
+    {% else %}
+        <p><em>English text not available for this lesson.</em></p>
+    {% endif %}
+</div>
+
+{# 显示中文译文 (如果存在) #}
+{% if lesson.text_cn %}
+<hr>
+<h3>参考译文 (Translation)</h3>
+<div class="lesson-text chinese-text" style="line-height: 1.6; margin-bottom: 20px;">
+    {% if lesson.text_cn %}
+        {{ lesson.text_cn | safe }}
+    {% else %}
+         <p><em>Chinese translation not available for this lesson.</em></p>
+    {% endif %}
+</div>
+{% endif %}
+
+<hr>
+{# 返回课程列表的链接 #}
+<p><a href="{{ url_for('index') }}">&laquo; 返回课程列表 (Back to Lesson List)</a></p>
+
+{% endblock %}

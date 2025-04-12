@@ -1,0 +1,152 @@
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+    color: #333;
+}
+
+.container {
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 20px;
+    background-color: #fff;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    border-radius: 8px;
+}
+
+header {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 0;
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+footer {
+    text-align: center;
+    margin-top: 30px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+    font-size: 0.9em;
+    color: #777;
+}
+
+h1, h2, h3 {
+    color: #333;
+}
+
+form label, form input, form select, form button {
+    display: block;
+    margin-bottom: 10px;
+}
+
+form input[type="checkbox"] + label, form input[type="checkbox"] {
+    display: inline-block;
+    margin-right: 15px;
+}
+form fieldset {
+    border: 1px solid #ccc;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 4px;
+}
+form legend {
+    font-weight: bold;
+    padding: 0 5px;
+}
+
+
+form input[type="number"], form select {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    width: 100px;
+}
+
+form button, #submit-quiz-btn, #restart-quiz-btn {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1em;
+    transition: background-color 0.3s ease;
+}
+
+form button:hover, #submit-quiz-btn:hover, #restart-quiz-btn:hover {
+    background-color: #45a049;
+}
+
+.question {
+    margin-bottom: 20px;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background-color: #f9f9f9;
+}
+
+.question p {
+    margin-top: 0;
+    font-weight: bold;
+}
+
+.question input[type="text"] {
+    width: calc(100% - 22px); /* Account for padding */
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1em;
+}
+
+#results-area ul {
+    list-style: none;
+    padding: 0;
+}
+
+#results-area li {
+    background-color: #fff9f9;
+    border: 1px solid #fdd;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+}
+
+.correct {
+    color: green;
+    font-weight: bold;
+}
+
+.incorrect {
+    color: red;
+    font-weight: bold;
+}
+
+.hidden {
+    display: none;
+}
+
+#loading-indicator {
+    text-align: center;
+    padding: 20px;
+    font-style: italic;
+    color: #555;
+}
+.error {
+    color: red;
+    background-color: #ffebeb;
+    border: 1px solid red;
+    padding: 10px;
+    margin-top: 10px;
+    border-radius: 4px;
+}
+
+.preserve-newlines {
+    white-space: pre-line; /* 这个值会合并连续空格，但保留换行符 */
+    /* 或者使用 pre-wrap 如果你想保留所有空格和换行: */
+    /* white-space: pre-wrap; */
+    line-height: 1.6; /* 保留或调整行高 */
+    margin-bottom: 20px; /* 保留或调整边距 */
+}
