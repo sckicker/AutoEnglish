@@ -133,6 +133,63 @@ h3 {
     margin-top: 0; /* 移除 h3 的默认上边距 */
     margin-bottom: 1.5rem;
 }
+
+/* app/static/css/style.css */
+
+/* ... (所有其他样式) ... */
+
+/* 确保这些样式存在且符合预期 */
+#quiz-area {
+    background-color: #eef2f7; /* 柔和的蓝灰色背景 */
+    padding: 20px 25px;
+    border-radius: 8px;
+    margin-top: 2rem; /* 与上方按钮/内容的距离 */
+}
+
+#quiz-area h2 {
+    color: #343a40;
+    text-align: center;
+    margin-bottom: 1.5rem;
+    font-weight: 500;
+}
+
+.question.card {
+    background-color: #ffffff;
+    /* mb-3 类已在 JS 中添加 */
+    /* shadow-sm 类已在 JS 中添加 */
+}
+
+.question-prompt {
+    font-size: 1.05rem;
+    color: #333;
+    font-weight: 500;
+}
+
+.question-pos {
+    font-style: italic;
+    color: #6c757d;
+    margin-left: 8px;
+    font-size: 0.9em;
+    font-weight: normal;
+}
+
+/* 确保输入框样式由 Bootstrap .form-control 控制 */
+.question input.form-control {
+    margin-top: 0.5rem;
+}
+
+/* (可选) 验证状态样式 */
+input.form-control.is-valid { /* ... */ }
+input.form-control.is-invalid { /* ... */ }
+
+/* 结果区域样式 */
+#results-area {
+    /* 可以在 HTML 中添加 .p-3 .border .rounded .bg-light */
+}
+#results-area li.list-group-item { /* ... */ }
+.correct { /* ... */ }
+.incorrect { /* ... */ }
+
 /* 使用 Bootstrap form-label 等类来控制标签样式 */
 
 /* --- Forms & Buttons (Overrides) --- */

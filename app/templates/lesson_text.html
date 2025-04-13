@@ -1,41 +1,33 @@
-{# app/templates/lesson_text.html V1.1 - Cooler Layout #}
+{# app/templates/lesson_text.html V1.2 - Added Lesson Quiz Functionality #}
 {% extends "base.html" %} {# 继承基础模板 #}
 
 {# 设置页面标题 #}
 {% block title %}Lesson {{ lesson.lesson_number }} - {{ lesson.title_en or 'Lesson Text' }}{% endblock %}
 
 {% block content %}
-{# --- 1. 增强型标题区域 --- #}
-<div class="p-4 p-md-5 mb-4 rounded-3 bg-light shadow-sm border-start border-primary border-5"> {# Bootstrap Jumbotron-like styling #}
-    <div class="container-fluid py-3"> {# Inner container for padding #}
+{# --- 1. 增强型标题区域 (保持不变) --- #}
+<div class="p-4 p-md-5 mb-4 rounded-3 bg-light shadow-sm border-start border-primary border-5">
+    <div class="container-fluid py-3">
         <h1 class="display-5 fw-bold">Lesson {{ lesson.lesson_number }}: {{ lesson.title_en or 'Unknown Title' }}</h1>
         {% if lesson.title_cn %}
-            <p class="fs-4 text-muted">{{ lesson.title_cn }}</p> {# Larger font size for subtitle #}
+            <p class="fs-4 text-muted">{{ lesson.title_cn }}</p>
         {% endif %}
-        {# Optional: Add a brief lesson summary or goal here later #}
     </div>
 </div>
 
-{# --- 2. 双栏对照区域 --- #}
-<div class="row g-4"> {# Bootstrap Grid Row with gutters #}
-
+{# --- 2. 双栏对照区域 (保持不变) --- #}
+<div class="row g-4">
     {# --- 左栏：英文课文 --- #}
     <div class="col-md-6">
-        <div class="p-3 border rounded-2 bg-white h-100"> {# Add padding, border, background, ensure height consistency #}
+        <div class="p-3 border rounded-2 bg-white h-100">
             <h4 class="mb-3 pb-2 border-bottom"><i class="bi bi-file-text"></i> 课文 (Text)</h4>
-            <div class="lesson-text english-text preserve-newlines"> {# Use class for CSS styling #}
-                {% if lesson.text_en %}
-                    {{ lesson.text_en | safe }}
-                {% else %}
-                    <p class="text-muted"><em>English text not available.</em></p>
-                {% endif %}
+            <div class="lesson-text english-text preserve-newlines">
+                {% if lesson.text_en %}{{ lesson.text_en | safe }}{% else %}<p class="text-muted"><em>English text not available.</em></p>{% endif %}
             </div>
         </div>
     </div>
-
     {# --- 右栏：中文译文 --- #}
     <div class="col-md-6">
-        {# 只在有中文译文时显示整个卡片 #}
         {% if lesson.text_cn %}
             <div class="p-3 border rounded-2 bg-white h-100">
                 <h4 class="mb-3 pb-2 border-bottom"><i class="bi bi-translate"></i> 参考译文 (Translation)</h4>
@@ -44,42 +36,163 @@
                 </div>
             </div>
         {% else %}
-            {# Optional: Display a placeholder if no translation #}
             <div class="p-3 border rounded-2 bg-light h-100 d-flex align-items-center justify-content-center">
                  <p class="text-muted m-0"><em>Chinese translation not available.</em></p>
             </div>
         {% endif %}
     </div>
-
-</div> {# --- End Row --- #}
-
-{# --- 3. 返回链接 (按钮样式) --- #}
-<div class="mt-4 pt-3 text-center"> {# Margin top and padding top for separation, center align #}
-    <a href="{{ url_for('index') }}" class="btn btn-secondary">
-        <i class="bi bi-arrow-left-circle"></i> 返回课程列表 (Back to Lesson List)
-    </a>
-    {# Optional: Add a button/link to quiz this specific lesson #}
-    {# <a href="#" class="btn btn-success ms-2"><i class="bi bi-question-circle"></i> Quiz Lesson {{ lesson.lesson_number }}</a> #}
 </div>
+
+{# --- 3. 操作按钮区域 --- #}
+<div class="mt-4 pt-3 text-center border-top"> {# 添加了 border-top 分隔 #}
+    <a href="{{ url_for('index') }}" class="btn btn-secondary me-2"> {# 添加了 me-2 右边距 #}
+        <i class="bi bi-arrow-left-circle"></i> 返回课程列表
+    </a>
+    {# --- 新增：测试本课词汇按钮 --- #}
+    <button type="button" id="start-lesson-quiz-btn" class="btn btn-success" data-lesson-number="{{ lesson.lesson_number }}">
+        <i class="bi bi-question-circle-fill"></i> 测试本课词汇 (Quiz this Lesson)
+    </button>
+    {# --- 按钮结束 --- #}
+</div>
+
+{# --- 4. 隐藏的 Quiz 和 Results 区域 (从 index.html 移入) --- #}
+<div class="dynamic-content-area mt-4"> {# 包裹动态区域 #}
+    {# 测试题显示区域 #}
+    <div id="quiz-area" class="hidden"> {# 这个 div 会应用 style.css 中的背景色等 #}
+        <h2 class="text-center mb-4">Lesson {{ lesson.lesson_number }} 词汇测试进行中...</h2>
+        <div id="questions-container">
+            </div>
+        <div class="text-center"> {# 居中提交按钮 #}
+            <button type="button" id="submit-quiz-btn" class="btn btn-primary hidden mt-3">提交答案</button>
+        </div>
+    </div>
+
+    {# 测试结果显示区域 #}
+    <div id="results-area" class="hidden mt-4 p-3 border rounded bg-light"> {# 给结果区域也加点样式 #}
+        <h2>测试结果</h2>
+        <p>你的得分: <span id="score" class="fw-bold"></span> / <span id="total-questions"></span></p>
+        <h3>错题回顾:</h3>
+        <ul id="incorrect-list" class="list-group list-group-flush mb-3">
+            </ul>
+        {# 重新测试按钮现在应该是重新测试本课 #}
+        <button type="button" id="restart-quiz-btn" class="btn btn-info">重新测试本课 (Quiz Again)</button>
+        {# 这个按钮现在不叫 restartQuiz 了，逻辑需要调整 #}
+    </div>
+
+    {# 加载指示器 #}
+    <div id="loading-indicator" class="hidden mt-4 text-center">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="text-muted mt-2">请稍候...</p>
+    </div>
+
+    {# 错误消息显示区域 #}
+     <div id="error-message" class="alert alert-danger hidden mt-4" role="alert"></div>
+</div>
+{# --- 隐藏区域结束 --- #}
 
 {% endblock %}
 
+{# --- 特定页面 CSS (保持不变或移到 style.css) --- #}
 {% block styles_extra %}
-{# 添加一些针对此页面的特定 CSS (可选，也可以放在 style.css) #}
 <style>
-    .lesson-text {
-        font-size: 1.05rem; /* 稍微增大课文的字体大小 */
-        line-height: 1.8;   /* 增加行高以便阅读 */
-    }
-    /* 可以为英文和中文设置不同的字体 */
-    .english-text {
-        font-family: 'Times New Roman', Times, serif; /* 例如：使用衬线字体 */
-    }
-    .chinese-text {
-        font-family: 'Noto Sans SC', sans-serif; /* 确保中文使用合适的字体 */
-    }
-    .border-5 { /* Bootstrap 5.2+ has border-width utilities, otherwise define here */
-         border-width: 5px !important;
-    }
+    .lesson-text { font-size: 1.05rem; line-height: 1.8; }
+    .english-text { /* font-family: 'Times New Roman', Times, serif; */ }
+    .chinese-text { font-family: 'Noto Sans SC', sans-serif; }
+    .border-5 { border-width: 5px !important; }
+    .preserve-newlines { white-space: pre-line; } /* 确保这个样式存在 */
+    .dynamic-content-area { min-height: 200px; } /* 给动态区域一个最小高度，避免页面跳动 */
 </style>
+{% endblock %}
+
+{# --- 特定页面 JS --- #}
+{% block scripts_extra %}
+<script>
+// 这个脚本块会在 main.js 加载后执行
+
+// 获取本页特定的元素
+const startLessonQuizBtn = document.getElementById('start-lesson-quiz-btn');
+const quizArea = document.getElementById('quiz-area');
+const resultsArea = document.getElementById('results-area');
+const restartQuizBtn = document.getElementById('restart-quiz-btn'); // 重命名或复用逻辑
+
+// 假设 main.js 中定义了:
+// currentQuizData, userAnswers, displayQuestions, submitQuiz,
+// showLoading, hideLoading, showError, hideError
+// 我们需要一个新的启动函数和调整 restart
+
+async function startLessonQuiz(lessonNumber) {
+    hideError();
+    resultsArea.classList.add('hidden'); // 隐藏旧结果
+    quizArea.classList.remove('hidden'); // 显示测验区域
+    showLoading(true); // 显示加载动画
+    startLessonQuizBtn.disabled = true; // 禁用开始按钮
+
+    // 设定默认题目数量或测验所有单词
+    const numQuestions = 10; // 或者可以动态获取，或设置为一个很大值来获取所有
+    const quizType = 'cn_to_en'; // 或者可以从页面获取
+
+    try {
+        const response = await fetch(`/api/quiz?lessons=${lessonNumber}&count=${num_questions}&type=${quizType}`);
+        showLoading(false);
+
+        if (!response.ok) {
+            let errorMsg = `HTTP error! status: ${response.status}`;
+            try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch (e) {}
+            throw new Error(errorMsg);
+        }
+        currentQuizData = await response.json(); // 更新全局测验数据
+
+        if (!currentQuizData || currentQuizData.length === 0) {
+            showError(`未能加载 Lesson ${lessonNumber} 的词汇题。`);
+            quizArea.classList.add('hidden');
+            startLessonQuizBtn.disabled = false; // 重新启用按钮
+            return;
+        }
+
+        displayQuestions(); // 调用 main.js 中的函数显示问题
+        document.getElementById('submit-quiz-btn').classList.remove('hidden'); // 显示提交按钮
+
+    } catch (error) {
+        console.error('Error starting lesson quiz:', error);
+        showError(`开始测试失败: ${error.message}`);
+        quizArea.classList.add('hidden');
+        startLessonQuizBtn.disabled = false; // 出错时重新启用按钮
+    }
+}
+
+function restartLessonQuiz() {
+    // 这个函数会在点击结果区的“重新测试本课”时调用
+    resultsArea.classList.add('hidden');
+    quizArea.classList.add('hidden'); // 隐藏测试区以便重新开始
+    hideError();
+    startLessonQuizBtn.disabled = false; // 重新启用"测试本课词汇"按钮
+    // 可以选择性地调用 startLessonQuiz(lessonNumber) 直接开始新一轮测试
+    // startLessonQuiz(startLessonQuizBtn.dataset.lessonNumber);
+}
+
+// 为“测试本课词汇”按钮绑定事件
+if (startLessonQuizBtn) {
+    startLessonQuizBtn.addEventListener('click', () => {
+        const lessonNum = startLessonQuizBtn.dataset.lessonNumber;
+        if (lessonNum) {
+            startLessonQuiz(lessonNum);
+        } else {
+            showError('无法获取当前课程编号。');
+        }
+    });
+}
+
+// 为结果区的“重新测试本课”按钮绑定事件
+if (restartQuizBtn) {
+    restartQuizBtn.addEventListener('click', restartLessonQuiz);
+    // 注意：如果 main.js 也有一个全局的 restartQuiz 监听器，可能会冲突
+    // 最好是在 main.js 中检查当前页面，或者使用不同的 ID
+}
+
+// 注意：确保 submitQuiz 函数在提交后调用的是 restartLessonQuiz 或类似逻辑
+// 并且 main.js 中的 displayQuestions 能正确找到本页的 #questions-container
+
+</script>
 {% endblock %}
