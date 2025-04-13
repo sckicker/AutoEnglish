@@ -1,102 +1,210 @@
-{# app/templates/index.html #}
+{# app/templates/index.html V1.1 - Using Bootstrap 5 #}
 {% extends "base.html" %}
 
-{% block title %}选择课程 - NCE Vocab Quiz{% endblock %}
+{% block title %}首页 - 新概念英语学习平台{% endblock %}
 
 {% block content %}
+{# 使用 Bootstrap 容器并添加上下边距 #}
+<div class="container mt-4 mb-5">
 
-    <h2>新概念英语词汇学习平台</h2>
-    <p class="lead" style="margin-bottom: 20px; color: #555;">欢迎使用新概念英语词汇学习平台，选择课程开始你的词汇测试吧！</p>
-
-    <div class="quiz-options-container">
-        <h3>词汇测试选项</h3>
-        <div style="margin-bottom: 10px;">
-            <label for="num-questions">题目数量:</label>
-            <input type="number" id="num-questions" value="10" min="1" max="50">
-        </div>
-        <div style="margin-bottom: 10px;">
-            <label for="quiz-type">测试类型:</label>
-            <select id="quiz-type">
-                <option value="cn_to_en" selected>中译英 (写英文)</option>
-                <option value="en_to_cn">英译中 (写中文)</option>
-            </select>
-        </div>
-        <div>
-             <button type="button" id="start-quiz-btn">开始单词测试</button>
-        </div>
+    {# 页面主标题和介绍，居中显示 #}
+    <div class="text-center mb-4">
+        <h2>新概念英语词汇学习平台</h2>
+        <p class="lead text-muted">选择下方课程查看课文，或勾选课程后进行词汇测试。</p>
     </div>
 
-    <hr style="margin-top: 30px; margin-bottom: 30px;">
-
-    <h3>选择测试范围</h3>
-    <form id="lesson-selector">
-        <fieldset>
-            <legend>选择课程</legend>
-            <div class="lesson-list-container">
+    {# 1. 课程选择区域 (优先显示) #}
+    <div class="mb-4">
+        <h3 class="mb-3">课程列表 (Lesson List)</h3>
+        <form id="lesson-selector"> {# 将复选框放在表单内，方便后续 JS 操作 #}
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3"> {# 响应式网格布局 #}
                 {% if lessons %}
                     {% for lesson_num in lessons %}
-                        <div class="lesson-item">
-                            <input type="checkbox" name="lesson" value="{{ lesson_num }}" id="lesson-check-{{ lesson_num }}" style="margin-right: 10px;">
-                            <label for="lesson-check-{{ lesson_num }}">
-                                <a href="{{ url_for('view_lesson', lesson_number=lesson_num) }}" title="查看 Lesson {{ lesson_num }} 课文">
-                                    Lesson {{ lesson_num }}
-                                </a>
-                                <span style="font-size: 0.9em; color: #777;"> (View Text)</span>
-                            </label>
+                        <div class="col">
+                            <div class="card h-100 shadow-sm"> {# 卡片样式，高度一致，细微阴影 #}
+                                <div class="card-body d-flex flex-column"> {# Flex 布局使内容垂直分布 #}
+                                    <h5 class="card-title mb-3">Lesson {{ lesson_num }}</h5>
+                                    {# 可以考虑从数据库查询并显示课文标题 #}
+                                    {# <p class="card-subtitle mb-2 text-muted">{{ lesson_titles.get(lesson_num, '') }}</p> #}
+
+                                    {# 操作区域推到底部 #}
+                                    <div class="mt-auto pt-2 border-top">
+                                        <div class="d-grid gap-2"> {# 让按钮充满宽度 #}
+                                            <a href="{{ url_for('view_lesson', lesson_number=lesson_num) }}" class="btn btn-sm btn-outline-primary" title="查看 Lesson {{ lesson_num }} 课文">
+                                                <i class="bi bi-book-half"></i> 查看课文 (View Text) {# 使用 Bootstrap 图标示例 #}
+                                            </a>
+                                        </div>
+                                        <div class="form-check mt-2">
+                                            <input class="form-check-input" type="checkbox" name="lesson" value="{{ lesson_num }}" id="lesson-check-{{ lesson_num }}">
+                                            <label class="form-check-label small" for="lesson-check-{{ lesson_num }}">
+                                                选择测验 (Select for Quiz)
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     {% endfor %}
                 {% else %}
-                    <p>数据库中没有找到课程。请先处理 PDF 文件。</p>
-                    <form action="{{ url_for('process_pdf_route') }}" method="post" style="margin-top: 15px;">
-                         <button type="submit">处理 NCE Book 2 PDF (管理员)</button>
-                    </form>
+                    <div class="col-12">
+                        <div class="alert alert-warning" role="alert">
+                            数据库中没有找到课程。请先 <a href="#" data-bs-toggle="modal" data-bs-target="#adminActionModal">处理 PDF 文件</a> (管理员操作)。
+                        </div>
+                        {# 可以考虑将管理员操作放在一个模态框或单独页面 #}
+                        {# 这里仅作链接示例，实际功能需要配合模态框或跳转 #}
+                    </div>
                 {% endif %}
+            </div> {# End row #}
+        </fieldset> {# Fieldset 可能不再需要，或者可以围绕整个 row #}
+        </form> {# End lesson-selector form #}
+    </div>
+
+    {# 2. 词汇测试选项区域 #}
+    <div class="quiz-options-container mt-4 pt-4 border-top bg-light p-3 rounded"> {# 添加背景和圆角 #}
+        <h3 class="mb-3">词汇测试选项 (Quiz Options)</h3>
+        {# 使用 Bootstrap Grid 或 Stacking 来布局表单控件 #}
+        <div class="row g-3 align-items-center mb-3">
+            <div class="col-auto">
+                <label for="num-questions" class="col-form-label">题目数量:</label>
             </div>
-        </fieldset>
-    </form>
-
-    {# 分隔线 #}
-    <hr style="margin-top: 30px; margin-bottom: 30px; clear: both;">
-
-    <h3>管理员登录</h3>
-    <form action="{{ url_for('admin_login') }}" method="POST">
+            <div class="col-auto">
+                <input type="number" id="num-questions" class="form-control form-control-sm" value="10" min="1" max="50" style="width: 80px;">
+            </div>
+            <div class="col-auto">
+                 <label for="quiz-type" class="col-form-label">测试类型:</label>
+            </div>
+             <div class="col-auto">
+                <select id="quiz-type" class="form-select form-select-sm">
+                    <option value="cn_to_en" selected>中译英 (写英文)</option>
+                    <option value="en_to_cn">英译中 (写中文)</option>
+                </select>
+             </div>
+        </div>
         <div>
-            <label for="username">用户名:</label>
-            <input type="text" id="username" name="username" required>
+             {# 更加醒目的开始按钮 #}
+             <button type="button" id="start-quiz-btn" class="btn btn-success btn-lg" disabled> {# 初始禁用 #}
+                 <i class="bi bi-play-circle-fill"></i> 开始单词测试 (Start Quiz)
+             </button>
+             <small id="start-quiz-help" class="text-muted ms-2">请先在上方勾选课程</small> {# 提示信息 #}
         </div>
-        <div style="margin-top: 10px;">
-            <label for="password">密码:</label>
-            <input type="password" id="password" name="password" required>
-        </div>
-        <div style="margin-top: 15px;">
-            <button type="submit">登录</button>
-        </div>
-    </form>
+    </div>
 
-    {# 用于通过 JavaScript 加载测试题的区域 (默认隐藏) #}
-    <div id="quiz-area" class="hidden">
+    {# 3. 隐藏的 JS 控制区域 #}
+    {# 分隔线 (可选) #}
+    {# <hr style="margin-top: 30px; margin-bottom: 30px;"> #}
+
+    {# 测试题显示区域 #}
+    <div id="quiz-area" class="hidden mt-4">
         <h2>测试进行中...</h2>
         <div id="questions-container">
             </div>
-        <button type="button" id="submit-quiz-btn" class="hidden" style="margin-top: 20px;">提交答案</button>
+        <button type="button" id="submit-quiz-btn" class="btn btn-primary hidden mt-3">提交答案</button>
     </div>
 
-    {# 用于通过 JavaScript 显示测试结果的区域 (默认隐藏) #}
-    <div id="results-area" class="hidden">
+    {# 测试结果显示区域 #}
+    <div id="results-area" class="hidden mt-4">
         <h2>测试结果</h2>
-        <p>你的得分: <span id="score"></span> / <span id="total-questions"></span></p>
+        <p>你的得分: <span id="score" class="fw-bold"></span> / <span id="total-questions"></span></p>
         <h3>错题回顾:</h3>
-        <ul id="incorrect-list" style="padding-left: 20px;">
-            </ul>
-        <button type="button" id="restart-quiz-btn" style="margin-top: 15px;">重新开始</button>
+        <ul id="incorrect-list" class="list-group list-group-flush mb-3"> {# 使用 Bootstrap List group #}
+            {# JS 会填充 li.list-group-item #}
+        </ul>
+        <button type="button" id="restart-quiz-btn" class="btn btn-secondary">重新开始 (Restart)</button>
     </div>
 
-    {# 加载指示器 (默认隐藏) #}
-    <div id="loading-indicator" class="hidden">
-        <p>请稍候...</p>
+    {# 加载指示器 #}
+    <div id="loading-indicator" class="hidden mt-4 text-center">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="text-muted mt-2">请稍候...</p>
     </div>
 
-    {# 错误消息显示区域 (默认隐藏) #}
-     <div id="error-message" class="hidden error"></div>
+    {# 错误消息显示区域 #}
+     <div id="error-message" class="alert alert-danger hidden mt-4" role="alert"></div>
 
+
+    {# 4. 管理员登录区域 (移到底部，视觉上弱化) #}
+    <div class="admin-login-area mt-5 pt-4 border-top text-muted small">
+        <details> {# 使用 details/summary 可以折叠 #}
+            <summary style="cursor: pointer;">管理员操作 (Admin Actions)</summary>
+            <div class="mt-3 p-3 bg-light border rounded" style="max-width: 400px;">
+                <h4 class="h6">管理员登录</h4>
+                <form action="{{ url_for('admin_login') }}" method="POST">
+                    <div class="mb-2">
+                        <label for="username" class="form-label">用户名:</label>
+                        <input type="text" class="form-control form-control-sm" id="username" name="username" required>
+                    </div>
+                    <div class="mb-2">
+                        <label for="password" class="form-label">密码:</label>
+                        <input type="password" class="form-control form-control-sm" id="password" name="password" required>
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-secondary">登录</button>
+                </form>
+                {# 可以将处理 PDF 的按钮也移到管理员登录后的界面，而不是直接放在 else 里 #}
+                <hr>
+                 <h4 class="h6">处理 PDF (需要登录或权限)</h4>
+                 <form action="{{ url_for('process_pdf_route') }}" method="post">
+                     <button type="submit" class="btn btn-sm btn-warning">处理 NCE Book 2 PDF</button>
+                 </form>
+            </div>
+        </details>
+    </div>
+
+</div> {# End container #}
+
+{# 添加模态框示例，用于 "处理 PDF 文件" 链接 (可选) #}
+<div class="modal fade" id="adminActionModal" tabindex="-1" aria-labelledby="adminActionModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="adminActionModalLabel">管理员操作</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>处理 PDF 文件是管理员操作。请先登录。</p>
+        {# 可以将登录表单或处理按钮放在这里 #}
+         <form action="{{ url_for('process_pdf_route') }}" method="post">
+             <button type="submit" class="btn btn-warning">确认处理 PDF</button>
+         </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts_extra %}
+{# 添加用于控制开始按钮状态的 JS (示例) #}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const startQuizBtn = document.getElementById('start-quiz-btn');
+    const lessonCheckboxes = document.querySelectorAll('#lesson-selector input[name="lesson"]');
+    const startQuizHelp = document.getElementById('start-quiz-help');
+
+    function checkSelection() {
+        let oneChecked = false;
+        lessonCheckboxes.forEach(checkbox => {
+            if (checkbox.checked) {
+                oneChecked = true;
+            }
+        });
+        startQuizBtn.disabled = !oneChecked; // 如果没有选中，则禁用按钮
+        if (startQuizHelp) {
+             startQuizHelp.style.display = oneChecked ? 'none' : 'inline'; // 显示/隐藏提示
+        }
+    }
+
+    // 为所有复选框添加事件监听器
+    lessonCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', checkSelection);
+    });
+
+    // 页面加载时检查一次初始状态
+    checkSelection();
+});
+</script>
 {% endblock %}

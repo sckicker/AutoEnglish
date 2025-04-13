@@ -1,44 +1,85 @@
-{# app/templates/lesson_text.html #}
+{# app/templates/lesson_text.html V1.1 - Cooler Layout #}
 {% extends "base.html" %} {# 继承基础模板 #}
 
 {# 设置页面标题 #}
 {% block title %}Lesson {{ lesson.lesson_number }} - {{ lesson.title_en or 'Lesson Text' }}{% endblock %}
 
 {% block content %}
-{# 显示课文标题信息 #}
-<h2>Lesson {{ lesson.lesson_number }}: {{ lesson.title_en or 'Unknown Title' }}</h2>
-{% if lesson.title_cn %}
-<h3>{{ lesson.title_cn }}</h3>
-{% endif %}
-<hr>
-
-{# 显示英文课文 #}
-<h3>课文 (Text)</h3>
-<div class="lesson-text english-text" style="line-height: 1.6; margin-bottom: 20px;">
-    {# 使用 safe 过滤器允许 HTML (如果需要)，nl2br 转换换行为 <br> #}
-    {# 假设 text_en 存储时保留了段落间的换行符 #}
-    {% if lesson.text_en %}
-        {{ lesson.text_en | safe }}
-    {% else %}
-        <p><em>English text not available for this lesson.</em></p>
-    {% endif %}
+{# --- 1. 增强型标题区域 --- #}
+<div class="p-4 p-md-5 mb-4 rounded-3 bg-light shadow-sm border-start border-primary border-5"> {# Bootstrap Jumbotron-like styling #}
+    <div class="container-fluid py-3"> {# Inner container for padding #}
+        <h1 class="display-5 fw-bold">Lesson {{ lesson.lesson_number }}: {{ lesson.title_en or 'Unknown Title' }}</h1>
+        {% if lesson.title_cn %}
+            <p class="fs-4 text-muted">{{ lesson.title_cn }}</p> {# Larger font size for subtitle #}
+        {% endif %}
+        {# Optional: Add a brief lesson summary or goal here later #}
+    </div>
 </div>
 
-{# 显示中文译文 (如果存在) #}
-{% if lesson.text_cn %}
-<hr>
-<h3>参考译文 (Translation)</h3>
-<div class="lesson-text chinese-text" style="line-height: 1.6; margin-bottom: 20px;">
-    {% if lesson.text_cn %}
-        {{ lesson.text_cn | safe }}
-    {% else %}
-         <p><em>Chinese translation not available for this lesson.</em></p>
-    {% endif %}
+{# --- 2. 双栏对照区域 --- #}
+<div class="row g-4"> {# Bootstrap Grid Row with gutters #}
+
+    {# --- 左栏：英文课文 --- #}
+    <div class="col-md-6">
+        <div class="p-3 border rounded-2 bg-white h-100"> {# Add padding, border, background, ensure height consistency #}
+            <h4 class="mb-3 pb-2 border-bottom"><i class="bi bi-file-text"></i> 课文 (Text)</h4>
+            <div class="lesson-text english-text preserve-newlines"> {# Use class for CSS styling #}
+                {% if lesson.text_en %}
+                    {{ lesson.text_en | safe }}
+                {% else %}
+                    <p class="text-muted"><em>English text not available.</em></p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {# --- 右栏：中文译文 --- #}
+    <div class="col-md-6">
+        {# 只在有中文译文时显示整个卡片 #}
+        {% if lesson.text_cn %}
+            <div class="p-3 border rounded-2 bg-white h-100">
+                <h4 class="mb-3 pb-2 border-bottom"><i class="bi bi-translate"></i> 参考译文 (Translation)</h4>
+                <div class="lesson-text chinese-text preserve-newlines">
+                    {{ lesson.text_cn | safe }}
+                </div>
+            </div>
+        {% else %}
+            {# Optional: Display a placeholder if no translation #}
+            <div class="p-3 border rounded-2 bg-light h-100 d-flex align-items-center justify-content-center">
+                 <p class="text-muted m-0"><em>Chinese translation not available.</em></p>
+            </div>
+        {% endif %}
+    </div>
+
+</div> {# --- End Row --- #}
+
+{# --- 3. 返回链接 (按钮样式) --- #}
+<div class="mt-4 pt-3 text-center"> {# Margin top and padding top for separation, center align #}
+    <a href="{{ url_for('index') }}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left-circle"></i> 返回课程列表 (Back to Lesson List)
+    </a>
+    {# Optional: Add a button/link to quiz this specific lesson #}
+    {# <a href="#" class="btn btn-success ms-2"><i class="bi bi-question-circle"></i> Quiz Lesson {{ lesson.lesson_number }}</a> #}
 </div>
-{% endif %}
 
-<hr>
-{# 返回课程列表的链接 #}
-<p><a href="{{ url_for('index') }}">&laquo; 返回课程列表 (Back to Lesson List)</a></p>
+{% endblock %}
 
+{% block styles_extra %}
+{# 添加一些针对此页面的特定 CSS (可选，也可以放在 style.css) #}
+<style>
+    .lesson-text {
+        font-size: 1.05rem; /* 稍微增大课文的字体大小 */
+        line-height: 1.8;   /* 增加行高以便阅读 */
+    }
+    /* 可以为英文和中文设置不同的字体 */
+    .english-text {
+        font-family: 'Times New Roman', Times, serif; /* 例如：使用衬线字体 */
+    }
+    .chinese-text {
+        font-family: 'Noto Sans SC', sans-serif; /* 确保中文使用合适的字体 */
+    }
+    .border-5 { /* Bootstrap 5.2+ has border-width utilities, otherwise define here */
+         border-width: 5px !important;
+    }
+</style>
 {% endblock %}
