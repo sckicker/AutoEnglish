@@ -1,37 +1,35 @@
-{# app/templates/index.html - 完整代码，已添加 JS 所需的 ID #}
+{# app/templates/index.html - 完整代码 V1.2 (配合 CSS V1.3) #}
 {% extends "base.html" %}
 
 {% block title %}首页 - 新概念英语学习平台{% endblock %}
 
 {% block content %}
-{# 使用 Bootstrap 容器并添加上下边距 #}
+{# 使用 Bootstrap 容器 #}
 <div class="container mt-4 mb-5">
 
-    {# 页面主标题和介绍，居中显示 #}
-    <div class="text-center mb-4">
+    {# 1. 新的页面顶部介绍区 #}
+    <div class="page-title-section text-center"> {# 应用新定义的 CSS 类 #}
         <h2>新概念英语词汇学习平台</h2>
-        <p class="lead text-muted">选择下方课程查看课文，或勾选课程后进行词汇测试。</p>
+        <p class="lead">选择下方课程查看课文，或勾选课程后进行词汇测试。</p>
     </div>
+    {# --- 介绍区结束 --- #}
 
-    {# 1. 课程选择区域 (优先显示) #}
-    {# --- 给这个包含标题和表单的 div 添加 ID --- #}
-    <div class="mb-4" id="lesson-selection-section"> {# <--- ID 添加在此 #}
+
+    {# 2. 课程选择区域 #}
+    <div class="mb-4" id="lesson-selection-section"> {# <--- JS 需要的 ID #}
         <h3 class="mb-3">课程列表 (Lesson List)</h3>
-        <form id="lesson-selector"> {# 将复选框放在表单内，方便后续 JS 操作 #}
-            {# <fieldset> Fieldset 可能不再需要 #}
+        <form id="lesson-selector">
             <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3"> {# 响应式网格布局 #}
                 {% if lessons %}
                     {% for lesson_num in lessons %}
                         <div class="col">
-                            <div class="card h-100 shadow-sm"> {# 卡片样式，高度一致，细微阴影 #}
-                                <div class="card-body d-flex flex-column"> {# Flex 布局使内容垂直分布 #}
+                            <div class="card h-100 shadow-sm"> {# 卡片样式 #}
+                                <div class="card-body d-flex flex-column">
                                     <h5 class="card-title mb-3">Lesson {{ lesson_num }}</h5>
-
-                                    {# 操作区域推到底部 #}
-                                    <div class="mt-auto pt-2 border-top">
-                                        <div class="d-grid gap-2"> {# 让按钮充满宽度 #}
+                                    <div class="mt-auto pt-2 border-top"> {# 操作区推到底部 #}
+                                        <div class="d-grid gap-2">
                                             <a href="{{ url_for('view_lesson', lesson_number=lesson_num) }}" class="btn btn-sm btn-outline-primary" title="查看 Lesson {{ lesson_num }} 课文">
-                                                <i class="bi bi-book-half"></i> 查看课文 (View Text) {# 使用 Bootstrap 图标示例 #}
+                                                <i class="bi bi-book-half"></i> 查看课文 (View Text)
                                             </a>
                                         </div>
                                         <div class="form-check mt-2">
@@ -53,16 +51,13 @@
                     </div>
                 {% endif %}
             </div> {# End row #}
-            {# </fieldset> #}
         </form> {# End lesson-selector form #}
     </div> {# --- End lesson-selection-section --- #}
 
 
-    {# 2. 词汇测试选项区域 #}
-    {# --- 给这个包含选项和开始按钮的 div 添加 ID --- #}
-    <div class="quiz-options-container mt-4 pt-4 border-top bg-light p-3 rounded" id="quiz-options-section"> {# <--- ID 添加在此 #}
+    {# 3. 词汇测试选项区域 #}
+    <div class="quiz-options-container mt-4 p-3 rounded" id="quiz-options-section"> {# <--- JS 需要的 ID #}
         <h3 class="mb-3">词汇测试选项 (Quiz Options)</h3>
-        {# 使用 Bootstrap Grid 或 Stacking 来布局表单控件 #}
         <div class="row g-3 align-items-center mb-3">
             <div class="col-auto">
                 <label for="num-questions" class="col-form-label">题目数量:</label>
@@ -81,24 +76,27 @@
              </div>
         </div>
         <div>
-             {# 更加醒目的开始按钮 #}
-             <button type="button" id="start-quiz-btn" class="btn btn-success btn-lg" disabled> {# 初始禁用 #}
+             <button type="button" id="start-quiz-btn" class="btn btn-primary btn-lg" disabled> {# 使用 btn-primary #}
                  <i class="bi bi-play-circle-fill"></i> 开始单词测试 (Start Quiz)
              </button>
-             <small id="start-quiz-help" class="text-muted ms-2">请先在上方勾选课程</small> {# 提示信息 #}
+             <small id="start-quiz-help" class="text-muted ms-2">请先在上方勾选课程</small>
         </div>
     </div> {# --- End quiz-options-section --- #}
 
 
-    {# 3. 隐藏的 JS 控制区域 (保持不变) #}
+    {# 4. 隐藏的 JS 控制区域 #}
+    <hr class="my-4"> {# Bootstrap 水平线替代 #}
+
     <div id="quiz-area" class="hidden mt-4">
         <h2>测试进行中...</h2>
         <div id="questions-container">
             </div>
-        <button type="button" id="submit-quiz-btn" class="btn btn-primary hidden mt-3">提交答案</button>
+        <div class="text-center">
+            <button type="button" id="submit-quiz-btn" class="btn btn-primary hidden mt-3">提交答案</button>
+        </div>
     </div>
 
-    <div id="results-area" class="hidden mt-4">
+    <div id="results-area" class="hidden mt-4 p-3 border rounded bg-light">
         <h2>测试结果</h2>
         <p>你的得分: <span id="score" class="fw-bold"></span> / <span id="total-questions"></span></p>
         <h3>错题回顾:</h3>
@@ -117,14 +115,13 @@
      <div id="error-message" class="alert alert-danger hidden mt-4" role="alert"></div>
 
 
-    {# 4. 管理员登录区域 (保持不变) #}
+    {# 5. 管理员登录区域 #}
     <div class="admin-login-area mt-5 pt-4 border-top text-muted small">
         <details>
             <summary style="cursor: pointer;">管理员操作 (Admin Actions)</summary>
             <div class="mt-3 p-3 bg-light border rounded" style="max-width: 400px;">
                 <h4 class="h6">管理员登录</h4>
                 <form action="{{ url_for('admin_login') }}" method="POST">
-                    {# ... login form inputs ... #}
                      <div class="mb-2">
                         <label for="username" class="form-label">用户名:</label>
                         <input type="text" class="form-control form-control-sm" id="username" name="username" required>
@@ -148,7 +145,23 @@
 
 {# 模态框 (保持不变) #}
 <div class="modal fade" id="adminActionModal" tabindex="-1" aria-labelledby="adminActionModalLabel" aria-hidden="true">
-  {# ... modal content ... #}
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="adminActionModalLabel">管理员操作</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>处理 PDF 文件是管理员操作。请先登录。</p>
+                 <form action="{{ url_for('process_pdf_route') }}" method="post">
+                     <button type="submit" class="btn btn-warning">确认处理 PDF</button>
+                 </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 {% endblock %}
@@ -158,35 +171,25 @@
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const startQuizBtn = document.getElementById('start-quiz-btn');
-    // Ensure the selector targets checkboxes within the correct form/container
     const lessonCheckboxes = document.querySelectorAll('#lesson-selector input[name="lesson"]');
     const startQuizHelp = document.getElementById('start-quiz-help');
 
     function checkSelection() {
-        // Defensive check in case button doesn't exist
         if (!startQuizBtn) return;
-
         let oneChecked = false;
         lessonCheckboxes.forEach(checkbox => {
-            if (checkbox.checked) {
-                oneChecked = true;
-            }
+            if (checkbox.checked) oneChecked = true;
         });
         startQuizBtn.disabled = !oneChecked;
-        if (startQuizHelp) {
-             startQuizHelp.style.display = oneChecked ? 'none' : 'inline';
-        }
+        if (startQuizHelp) startQuizHelp.style.display = oneChecked ? 'none' : 'inline';
     }
 
-    // Add listeners only if checkboxes exist
     if (lessonCheckboxes.length > 0) {
         lessonCheckboxes.forEach(checkbox => {
             checkbox.addEventListener('change', checkSelection);
         });
-        // Initial check
         checkSelection();
     } else if(startQuizBtn) {
-        // If no checkboxes rendered, keep button disabled
         startQuizBtn.disabled = true;
          if (startQuizHelp) startQuizHelp.style.display = 'inline';
     }

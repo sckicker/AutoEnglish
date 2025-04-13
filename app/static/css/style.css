@@ -1,303 +1,342 @@
-/* app/static/css/style.css - V1.2 (Enhanced + Bootstrap 5 Integration) */
+/* app/static/css/style.css - V1.4 (No External Fonts, Enhanced Aesthetics) */
 
-/* --- Base & Typography --- */
-body {
-    /* 优先使用 Noto Sans SC (思源黑体) 以获得更好的中文字符支持, 然后是备选字体 */
-    font-family: 'Noto Sans SC', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    line-height: 1.6;
-    background-color: #f0f4f8; /* 一个柔和的浅蓝色/灰色背景 */
-    color: #343a40; /* Bootstrap 的标准深灰色文本 */
+/* --- CSS 变量 (定义调色板和基础设置) --- */
+:root {
+    --primary-color: #3f51b5; /* 主题蓝 (来自你之前的 CSS) */
+    --primary-dark: #303f9f;  /* 深一点的主题蓝 */
+    --primary-light: #e8eaf6; /* 很浅的主题蓝 */
+    --secondary-color: #6c757d; /* Bootstrap 灰色 */
+    --success-color: #198754;  /* Bootstrap 绿色 (替换之前的 #4CAF50?) */
+    --warning-color: #ffc107;  /* Bootstrap 黄色 */
+    --light-bg: #f8f9fa;      /* Bootstrap 浅灰 */
+    --body-bg: #f0f4f8;       /* 页面背景色 */
+    --text-color: #212529;    /* Bootstrap 深灰文本 */
+    --text-muted: #6c757d;
+    --card-bg: #ffffff;
+    --card-shadow: rgba(0, 0, 0, 0.06);
+    --card-hover-shadow: rgba(63, 81, 181, 0.15);
+    --border-color: #dee2e6;
+    --border-radius-base: 0.375rem; /* Bootstrap 默认 */
+    --border-radius-lg: 0.5rem;   /* 稍大圆角 */
+    --border-radius-xl: 1rem;    /* 更大圆角 */
+
+    /* --- 系统字体栈 (优先使用系统 UI 字体, 兼顾中英文) --- */
+    --font-sans-serif: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", Arial, sans-serif;
 }
 
-/* --- Container --- */
-/* Bootstrap 的 .container 类负责控制主要内容的宽度和居中, 无需自定义 */
-/* 你可以在 base.html 中的 <main> 或特定的 <div> 上使用 .container 或 .container-fluid */
+/* --- 基础样式 --- */
+body {
+    font-family: var(--font-sans-serif); /* 应用系统字体栈 */
+    line-height: 1.65; /* 稍增加行高 */
+    background-color: var(--body-bg);
+    color: var(--text-color);
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased; /* 字体抗锯齿 (macOS/iOS) */
+    -moz-osx-font-smoothing: grayscale;  /* (Firefox on macOS) */
+    margin: 0;
+    padding: 0;
+    background-color: #f0f8ff; /* 这里设置你想要的背景颜色，例如淡蓝色 */
+    color: #333;
+}
+
+/* --- 英雄区域样式 --- */
+.hero-section {
+    padding: 4rem 1.5rem;
+    margin-bottom: 3rem;
+    /* 使用更柔和的主题色渐变背景 */
+    background: linear-gradient(135deg, var(--primary-color) 0%, #5c6bc0 100%);
+    color: white;
+    border-radius: var(--border-radius-xl); /* 更大的圆角 */
+    text-align: center;
+    box-shadow: 0 8px 25px rgba(63, 81, 181, 0.2); /* 添加一些阴影 */
+}
+.hero-section h2 {
+    font-size: 2.8rem; /* 调整标题大小 */
+    font-weight: 700; /* 加粗 */
+    color: white;
+    letter-spacing: 0.5px;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+    margin-bottom: 0.75rem;
+    border-bottom: none;
+    padding-bottom: 0;
+}
+.hero-section p.lead {
+    font-size: 1.15rem;
+    color: rgba(255, 255, 255, 0.9); /* 提高一点透明度 */
+    margin-bottom: 0;
+    font-weight: 300; /* 更细的字体 */
+}
+
+/* --- Container (由 Bootstrap 控制) --- */
 
 /* --- Header & Footer --- */
-/* 主要样式通过 Bootstrap 类在 base.html 中设置 (如 bg-primary, text-white 等) */
-/* 这里可以添加额外的覆盖或调整 */
-header.bg-primary { /* 确保 header 标签有 bg-primary 类 */
-    background-color: #3f51b5 !important; /* 使用你的蓝色覆盖 Bootstrap 默认 primary */
-    border-bottom: 3px solid #303f9f; /* 添加一个深色下边框增加层次感 */
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* 轻微的阴影 */
+header.bg-primary {
+    background-color: var(--primary-color) !important; /* 确保使用变量 */
+    border-bottom: none; /* 移除之前的粗边框，让 Hero Section 突出 */
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    padding: 1rem 0; /* 调整内边距 */
 }
-
+header h1.h3 { /* 匹配 base.html 中的类 */
+    font-size: 1.5rem; /* 调整 Header 标题大小 */
+    font-weight: 500;
+}
+header h1 a { /* 确保颜色和下划线 */
+     color: white !important;
+     text-decoration: none;
+}
 header h1 a:hover {
-    text-decoration: underline; /* 鼠标悬停时给标题链接加下划线 */
+     text-decoration: none;
+     opacity: 0.9; /* 悬停时稍微变淡 */
 }
 
-footer.footer { /* 可以给 footer 标签添加 class="footer" */
-    font-size: 0.9em;
-    color: #6c757d; /* Bootstrap 的 secondary text color */
+.page-title-section h2 {
+    background-image: linear-gradient(to right, #800080, #ff8c00, #808000, #008000, #000080, #4b0082, #8b00ff); /* 更深的彩虹渐变 */
+    -webkit-background-clip: text;
+    color: transparent;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); /* 稍微加深阴影 */
+}
+
+.page-title-section p.lead {
+    background-image: linear-gradient(to right, #008080, #00008b); /* 更深的蓝绿渐变 */
+    -webkit-background-clip: text;
+    color: transparent;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); /* 稍微加深阴影 */
+}
+
+footer.footer {
+    font-size: 0.85rem; /* 页脚文字稍小 */
+    color: var(--text-muted);
+    margin-top: 4rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
 }
 
 /* --- Headings --- */
-h2 {
-    color: #3f51b5; /* 你的蓝色 */
-    font-weight: 500;
+h3 { /* 区域标题 */
+    font-weight: 600; /* 加粗 */
+    color: var(--primary-dark); /* 使用深一点的主色 */
+    letter-spacing: 0.3px;
+    border-bottom: 1px solid var(--border-color);
     padding-bottom: 0.6rem;
-    border-bottom: 2px solid #d9deff; /* 用主题色的浅色调做下划线 */
-    margin-bottom: 1.5rem; /* 增加标题下的间距 */
+    margin-bottom: 1.5rem;
 }
 
-h3 {
-    color: #495057;
-    font-weight: 500;
-    margin-top: 1.5rem; /* 增加 h3 上方的间距 */
+.mb-4 h3 {
     margin-bottom: 1rem;
+    padding: 0.5rem 1rem;
+    background-color: #007bff; /* 主题蓝色 */
+    color: white;
+    border-radius: 5px;
+    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.15);
+    display: inline-block;
 }
 
 /* --- Lesson Selection Cards --- */
-
-/* 移除自定义 Grid 样式, 因为 HTML 中使用了 Bootstrap 的 row/col */
-/* .lesson-list-container { ... } /* REMOVE */
-
 .card {
-    border: none; /* 移除 Bootstrap 卡片的默认边框 */
-    border-radius: 10px; /* 更圆润的边角 */
-    /* 使用非常淡的线性渐变背景 */
-    background: linear-gradient(135deg, #ffffff 0%, #f7f9fc 100%);
-    /* 柔和的、弥散的阴影 */
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.07);
-    transition: all 0.3s ease-in-out; /* 平滑过渡效果 */
-    /* 卡片顶部的装饰性边框，使用你的蓝色 */
-    border-top: 4px solid #aab1d1; /* 默认的浅蓝色顶部边框 */
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    background-image: linear-gradient(to bottom right, #a7ffeb, #8c9eff); /* 从浅绿色到浅紫色 */
+    box-shadow: 0 4px 10px var(--card-shadow);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    overflow: hidden;
+    height: 100%;
 }
-
 .card:hover {
-    transform: translateY(-5px); /* 鼠标悬停时轻微上移 */
-    /* 悬停时阴影更明显，并带一点主题色 */
-    box-shadow: 0 10px 25px rgba(63, 81, 181, 0.18);
-    border-top-color: #3f51b5; /* 悬停时顶部边框变为主色 */
+    transform: translateY(-4px);
+    box-shadow: 0 10px 20px var(--card-hover-shadow);
 }
-
 .card-body {
-    padding: 1.25rem; /* Bootstrap 默认内边距，可根据需要调整 */
+    padding: 1.25rem;
     display: flex;
-    flex-direction: column; /* 确保内部元素垂直排列 */
-    height: 100%; /* 配合 HTML 中的 h-100 类，使卡片等高 */
+    flex-direction: column;
 }
-
 .card-title {
-    color: #3f51b5; /* 你的蓝色 */
-    font-weight: 600; /* 标题加粗 */
-    margin-bottom: 0.75rem; /* 标题和下方内容的间距 */
+    color: var(--primary-dark);
+    font-weight: 600;
+    margin-bottom: 0.75rem;
     padding-bottom: 0.5rem;
-    border-bottom: 1px solid #e9ecef; /* 标题下的浅灰色分隔线 */
+    border-bottom: 1px solid #f0f0f0; /* 更浅的分隔线 */
 }
-
-/* 卡片中操作按钮/链接的容器，推到底部 */
-.card .mt-auto {
-    padding-top: 0.75rem; /* 与上方内容的间距 */
-    border-top: 1px solid #e9ecef; /* 添加分隔线 */
-    margin-top: auto; /* 这是将此 div 推到底部的关键 */
+.card .mt-auto { /* 卡片底部操作区 */
+     border-top: none;
+     padding-top: 1rem;
+     margin-top: auto;
 }
-
-/* "查看课文" 按钮 */
 .card .btn-outline-primary {
-    border-color: #3f51b5;
-    color: #3f51b5;
+    border-color: var(--primary-color);
+    color: var(--primary-color);
     font-weight: 500;
-    transition: all 0.2s ease; /* 添加过渡 */
-    width: 100%; /* 让按钮充满其容器宽度 */
+    transition: all 0.2s ease;
+    width: 100%;
+    border-radius: var(--border-radius-base); /* 按钮圆角 */
+    font-size: 0.9rem;
 }
 .card .btn-outline-primary:hover {
-    background-color: #3f51b5;
+    background-color: var(--primary-color);
     color: white;
-    box-shadow: 0 2px 5px rgba(63, 81, 181, 0.3); /* 添加悬停阴影 */
+    box-shadow: 0 2px 5px rgba(63, 81, 181, 0.3);
 }
-.card .btn i {
-    margin-right: 0.3rem;
-    vertical-align: -1px; /* 微调图标垂直对齐 */
+.card .btn i { margin-right: 0.4rem; vertical-align: -1px; }
+.card .form-check { margin-top: 0.75rem; }
+.card .form-check-label { font-size: 0.9em; color: var(--text-muted); }
+
+.quiz-options-container h3 {
+    margin-bottom: 1rem;
+    background-image: linear-gradient(to right, #800080, #ff8c00, #808000, #008000, #000080, #4b0082, #8b00ff);
+    -webkit-background-clip: text;
+    color: transparent;
+    display: inline-block;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
 }
 
-/* "选择测验" 复选框 */
-.card .form-check {
-    margin-top: 0.75rem;
-}
-.card .form-check-label {
-    font-size: 0.9em;
-    color: #6c757d; /* Bootstrap secondary text color */
+.quiz-options-container {
+    margin-top: 4rem;
+    padding: 1.5rem;
+    border: 2px solid #007bff;
+    border-radius: 8px;
+    background-image: linear-gradient(to bottom right, #e0f7fa, #c5cae9); /* 一个柔和的渐变 */
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
 }
 
 /* --- Quiz Options Area --- */
-.quiz-options-container {
-    margin-top: 2.5rem;
-    padding: 1.5rem;
-    /* background-color: #ffffff; */ /* 可选：白色背景 */
-    border-radius: 8px; /* 添加圆角 */
-    /* box-shadow: 0 2px 8px rgba(0,0,0,0.06); */ /* 轻微阴影 */
-    border-top: 1px solid #e9ecef; /* 顶部边框 */
+#quiz-options-section {
+    background-color: var(--card-bg); /* 使用卡片背景色 */
+    border: 1px solid var(--border-color);
+    box-shadow: 0 3px 8px var(--card-shadow);
+    border-radius: var(--border-radius-lg); /* 与卡片一致的圆角 */
+    margin-top: 3rem; /* 增加与上方卡片的间距 */
+    padding: 1.5rem 2rem;
 }
-.quiz-options-container h3 {
-    margin-top: 0; /* 移除 h3 的默认上边距 */
+#quiz-options-section h3 {
+    border-bottom: none;
+    padding-bottom: 0;
     margin-bottom: 1.5rem;
-}
-
-/* app/static/css/style.css */
-
-/* ... (所有其他样式) ... */
-
-/* 确保这些样式存在且符合预期 */
-#quiz-area {
-    background-color: #eef2f7; /* 柔和的蓝灰色背景 */
-    padding: 20px 25px;
-    border-radius: 8px;
-    margin-top: 2rem; /* 与上方按钮/内容的距离 */
-}
-
-#quiz-area h2 {
-    color: #343a40;
     text-align: center;
-    margin-bottom: 1.5rem;
+}
+/* 调整选项行内间距 */
+#quiz-options-section .row > div {
+    padding-left: 5px;
+    padding-right: 5px;
+}
+#quiz-options-section label {
+     margin-bottom: 0; /* 移除 label 的下边距，与控件对齐 */
+}
+
+
+/* --- Buttons & Forms (Overrides) --- */
+.btn {
+    border-radius: var(--border-radius-base); /* 标准圆角 */
+    padding: 0.5rem 1.25rem; /* 调整默认按钮大小 */
     font-weight: 500;
+    transition: all 0.2s ease;
+    letter-spacing: 0.3px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05); /* 给所有按钮加轻微阴影 */
 }
-
-.question.card {
-    background-color: #ffffff;
-    /* mb-3 类已在 JS 中添加 */
-    /* shadow-sm 类已在 JS 中添加 */
+.btn:hover {
+    transform: translateY(-1px); /* 轻微上移 */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* 悬停阴影加深 */
 }
-
-.question-prompt {
-    font-size: 1.05rem;
-    color: #333;
-    font-weight: 500;
+.btn-lg {
+    padding: 0.75rem 1.75rem;
+    font-size: 1.1rem;
 }
-
-.question-pos {
-    font-style: italic;
-    color: #6c757d;
-    margin-left: 8px;
-    font-size: 0.9em;
-    font-weight: normal;
-}
-
-/* 确保输入框样式由 Bootstrap .form-control 控制 */
-.question input.form-control {
-    margin-top: 0.5rem;
-}
-
-/* (可选) 验证状态样式 */
-input.form-control.is-valid { /* ... */ }
-input.form-control.is-invalid { /* ... */ }
-
-/* 结果区域样式 */
-#results-area {
-    /* 可以在 HTML 中添加 .p-3 .border .rounded .bg-light */
-}
-#results-area li.list-group-item { /* ... */ }
-.correct { /* ... */ }
-.incorrect { /* ... */ }
-
-/* 使用 Bootstrap form-label 等类来控制标签样式 */
-
-/* --- Forms & Buttons (Overrides) --- */
-.btn-success { background-color: #4CAF50; border-color: #43a047; }
-.btn-success:hover { background-color: #388e3c; border-color: #2e7d32; }
-.btn-primary { background-color: #3f51b5; border-color: #303f9f; }
-.btn-primary:hover { background-color: #303f9f; border-color: #283593; }
-.btn-secondary { background-color: #6c757d; border-color: #6c757d; } /* 覆盖次要按钮 */
+/* 使用 CSS 变量覆盖颜色 */
+.btn-primary { background-color: var(--primary-color); border-color: var(--primary-color); }
+.btn-primary:hover { background-color: var(--primary-dark); border-color: var(--primary-dark); }
+.btn-success { background-color: var(--success-color); border-color: var(--success-color); }
+.btn-success:hover { background-color: #157347; border-color: #146c43; } /* Bootstrap 的深绿色 */
+.btn-secondary { background-color: var(--secondary-color); border-color: var(--secondary-color); }
 .btn-secondary:hover { background-color: #5a6268; border-color: #545b62; }
-.btn-warning { background-color: #ffc107; border-color: #ffc107; color: #212529;} /* 覆盖警告按钮 */
+.btn-warning { background-color: var(--warning-color); border-color: var(--warning-color); color: #212529;}
 .btn-warning:hover { background-color: #e0a800; border-color: #d39e00; color: #212529;}
 
-/* 主操作按钮 */
+/* 特别是 Start Quiz 按钮 */
 #start-quiz-btn {
-    /* 使用 .btn-primary 或 .btn-success 的样式 */
-    /* 调整大小和字体 */
-    padding: 0.75rem 1.5rem;
-    font-size: 1.1rem;
-    font-weight: 500;
-    display: inline-flex; /* 用于让图标和文字垂直居中 */
-    align-items: center;
-}
-#start-quiz-btn i {
-    margin-right: 0.5rem; /* 图标和文字间距 */
+    /* 样式已通过 btn-primary btn-lg 设置，可以保留 */
 }
 #start-quiz-btn:disabled {
-    background-color: #ced4da; /* Bootstrap 的禁用颜色 */
+    background-color: #ced4da;
     border-color: #ced4da;
     cursor: not-allowed;
     opacity: 0.65;
+    box-shadow: none; /* 禁用时无阴影 */
+    transform: none; /* 禁用时无效果 */
 }
-#start-quiz-help {
-    font-size: 0.85em;
-    color: #6c757d;
+#start-quiz-help { font-size: 0.85em; }
+
+/* 美化 Select 和 Input (基础) */
+.form-control, .form-select {
+    border-radius: var(--border-radius-base);
+    border-color: var(--border-color);
+    transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+}
+.form-control:focus, .form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.25rem rgba(63, 81, 181, 0.25); /* 使用主色调的光晕 */
+}
+.form-control-sm, .form-select-sm { /* 调整小号控件尺寸 */
+    padding: 0.35rem 0.75rem;
+    font-size: 0.875rem;
 }
 
 /* --- Quiz & Results Area --- */
-.question {
-    margin-bottom: 1.5rem;
-    padding: 1.25rem;
-    border: 1px solid #dee2e6;
-    border-radius: 0.375rem;
-    background-color: #f8f9fa;
+#quiz-area {
+    background-color: transparent; /* 使用页面背景 */
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+    margin-top: 2.5rem; /* 调整与上方距离 */
 }
-.question p {
-    font-weight: bold;
-    color: #495057;
-    margin-bottom: 0.75rem; /* 调整问题和输入框间距 */
+#quiz-area h2 { /* "测试进行中..." */
+    font-family: var(--font-heading);
+    color: var(--primary-dark);
+    text-align: left; /* 不再居中 */
+    margin-bottom: 1.5rem;
+    font-weight: 700;
+    border-bottom: 2px solid var(--primary-color);
+    padding-bottom: 0.5rem;
 }
 
-/* 使用 Bootstrap List Group 样式 (在 HTML 中添加对应 class) */
-#results-area ul.list-group {
-    margin-bottom: 1.5rem;
+.question.card { /* 题目卡片 */
+    margin-bottom: 1rem;
+    background-color: var(--card-bg); /* 确保有背景 */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.07); /* 轻微阴影 */
+    border: 1px solid var(--border-color);
 }
-#results-area li.list-group-item {
-    background-color: #fff;
-    border-color: rgba(0, 0, 0, 0.08); /* 更浅的边框 */
-    padding: 0.75rem 1rem;
+.question-prompt { font-size: 1rem; color: var(--text-color); font-weight: 500; }
+.question-pos { font-style: normal; color: var(--text-muted); margin-left: 8px; font-size: 0.85em; font-weight: 400; background-color: #e9ecef; padding: 1px 4px; border-radius: 3px; }
+.question input.form-control { margin-top: 0.75rem; }
+input.form-control.is-valid { border-color: var(--success-color); background-color: #f0fff0; }
+input.form-control.is-invalid { border-color: #dc3545; background-color: #fff0f0; }
+
+#results-area { /* 结果区域样式 */
+     background-color: var(--card-bg); /* 白色背景 */
+     border: 1px solid var(--border-color);
+     box-shadow: 0 3px 8px var(--card-shadow);
+     border-radius: var(--border-radius-lg);
+     margin-top: 2.5rem;
+     padding: 1.5rem;
 }
-.correct { color: #198754; font-weight: bold; }
+#results-area h2 { font-family: var(--font-heading); color: var(--success-color); margin-bottom: 1rem; }
+#results-area h3 { font-size: 1.1rem; font-weight: 600; color: #555; margin-top: 1.5rem; margin-bottom: 0.75rem; padding-bottom: 0.3rem; border-bottom: 1px solid #eee; }
+#results-area li.list-group-item { border-color: rgba(0, 0, 0, 0.06); padding: 0.75rem 0; } /* 调整列表项 */
+.correct { color: var(--success-color); font-weight: bold; }
 .incorrect { color: #dc3545; font-weight: bold; }
 
+
 /* --- Utilities --- */
-.hidden {
-    display: none !important; /* 确保隐藏 */
-}
+.hidden { display: none !important; }
+#loading-indicator .spinner-border { width: 2.5rem; height: 2.5rem; }
+#error-message.alert { /* Bootstrap handles styling */ }
+.preserve-newlines { white-space: pre-line; line-height: 1.7; }
 
-#loading-indicator .spinner-border {
-    width: 3rem; /* 调整加载动画大小 */
-    height: 3rem;
-}
-
-/* 错误提示使用 Bootstrap Alert 样式 (在 HTML 中添加对应 class) */
-#error-message.alert {
-    /* 可以添加额外样式 */
-}
-
-/* Preserve newlines style */
-.preserve-newlines {
-    white-space: pre-line;
-    line-height: 1.7;
-}
 
 /* --- Admin Area --- */
-.admin-login-area {
-    margin-top: 3rem; /* 与上方内容有更大间距 */
-    padding-top: 1.5rem;
-    border-top: 1px solid #dee2e6;
-}
-.admin-login-area details summary {
-    cursor: pointer;
-    color: #6c757d; /* 使用次要颜色 */
-    font-weight: 500;
-    margin-bottom: 0.5rem;
-    display: inline-block; /* 防止撑满宽度 */
-}
-.admin-login-area details[open] summary { /* 打开时下方留白 */
-    margin-bottom: 1rem;
-}
-.admin-login-area .card, /* 如果用卡片包裹 */
-.admin-login-area > div { /* 直接的 div 包裹 */
-    background-color: #f8f9fa; /* 浅灰色背景 */
-}
-/* 调整管理员表单内控件大小 */
-.admin-login-area .form-control-sm {
-    font-size: 0.875rem;
-}
-.admin-login-area .btn-sm {
-    font-size: 0.875rem;
-    padding: 0.25rem 0.5rem;
-}
+.admin-login-area { margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color); }
+.admin-login-area details summary { cursor: pointer; color: var(--secondary-color); font-weight: 500; margin-bottom: 0.5rem; display: inline-block; transition: color 0.2s ease;}
+.admin-login-area details summary:hover { color: var(--primary-color); }
+.admin-login-area details[open] summary { margin-bottom: 1rem; }
+.admin-login-area .card, .admin-login-area > div > div { /* Target the inner div */ background-color: #f8f9fa; border-radius: var(--border-radius-base); }
+.admin-login-area h4.h6 { font-weight: 600; margin-bottom: 0.75rem; }
+.admin-login-area .form-control-sm { font-size: 0.875rem; }
+.admin-login-area .btn-sm { font-size: 0.875rem; padding: 0.25rem 0.5rem; }
