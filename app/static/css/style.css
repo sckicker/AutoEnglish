@@ -222,6 +222,80 @@ h3 { /* 区域标题 */
      margin-bottom: 0; /* 移除 label 的下边距，与控件对齐 */
 }
 
+.container-fluid h1.display-5.fw-bold {
+    font-size: 2.8rem; /* 更大的字号 */
+    color: #007bff; /* 使用你的主题蓝色或其他醒目的颜色 */
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2); /* 添加一个柔和的阴影，使其更立体 */
+    margin-bottom: 1rem; /* 确保下方有足够的留白 */
+}
+
+.lesson-text.english-text {
+    font-family: "Segoe UI", Roboto, sans-serif;
+    line-height: 1.7;
+    font-size: 1.2rem;
+    color: navy;
+    white-space: pre-wrap;
+}
+
+/* 针对整个包含英文和中文的 row */
+.row.g-4 > div {
+    margin-bottom: 15px; /* 增加一些底部外边距 */
+}
+
+/* 英文课文区域样式 */
+.col-md-6:first-child .p-3.border.rounded-2.bg-white.h-100 {
+    background-color: #f9f9f9; /* 浅灰色背景 */
+    border-color: #ddd; /* 更柔和的边框 */
+    padding: 25px; /* 增加内边距 */
+}
+
+.col-md-6:first-child h4.mb-3.pb-2.border-bottom {
+    color: #007bff; /* 使用你的主题蓝色 */
+    border-bottom: 1px solid #eee; /* 更细的底部边框 */
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    font-size: 1.1rem; /* 稍微调整字号 */
+}
+
+.col-md-6:first-child .lesson-text {
+    font-family: Arial, sans-serif; /* 选择易读的字体 */
+    line-height: 1.7; /* 增加行高 */
+    font-size: 1.05rem; /* 稍微增大字号 */
+    color: #333;
+}
+
+/* 中文译文区域样式 */
+.col-md-6:last-child .p-3.border.rounded-2.bg-white.h-100,
+.col-md-6:last-child .p-3.border.rounded-2.bg-light.h-100 {
+    background-color: #f0fff0; /* 淡绿色背景 */
+    border-color: #ddd; /* 更柔和的边框 */
+    padding: 25px; /* 增加内边距 */
+}
+
+.col-md-6:last-child h4.mb-3.pb-2.border-bottom {
+    color: #28a745; /* 可以使用绿色系颜色 */
+    border-bottom: 1px solid #eee; /* 更细的底部边框 */
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    font-size: 1.1rem; /* 稍微调整字号 */
+}
+
+.col-md-6:last-child .lesson-text {
+    font-family: "微软雅黑", sans-serif; /* 常用的中文易读字体 */
+    line-height: 1.9; /* 增加行高 */
+    font-size: 1.05rem; /* 稍微增大字号 */
+    color: #333;
+}
+
+/* 针对 "Chinese translation not available." 的样式 */
+.col-md-6:last-child .p-3.border.rounded-2.bg-light.h-100.d-flex {
+    border-color: #ddd;
+}
+
+/* 通用的标题图标样式 */
+.col-md-6 h4 i.bi {
+    margin-right: 5px;
+}
 
 /* --- Buttons & Forms (Overrides) --- */
 .btn {
