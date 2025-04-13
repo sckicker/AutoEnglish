@@ -1,5 +1,4 @@
 {# app/templates/base.html #}
-
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -8,6 +7,7 @@
     <title>{% block title %}NCE Vocab Quiz{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     {% block head_extra %}{% endblock %}
+    {% block styles_extra %}{% endblock %}  {# 将额外的样式块放在 head 标签内 #}
 </head>
 <body>
     <header>
@@ -18,9 +18,9 @@
             </a>
         </h1>
         {# --- 链接结束 --- #}
-        </header>
+    </header>
 
-    <main class="container"> {# 将 class="container" 移到 main 标签可能更合适 #}
+    <main class="container">
         {% block content %}
         {% endblock %}
     </main>
@@ -35,6 +35,6 @@
     </footer>
 
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
-    {% block scripts_extra %}{% endblock %}
+    {% block scripts_extra %}{% endblock %}  {# 将额外的脚本块放在 body 底部 #}
 </body>
 </html>

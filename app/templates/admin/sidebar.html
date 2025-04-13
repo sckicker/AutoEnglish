@@ -1,0 +1,11 @@
+<aside class="admin-sidebar">
+    <h3>管理菜单</h3>
+    <ul>
+        <li><a href="{{ url_for('admin') }}" class="{% if request.endpoint == 'admin' %}active{% endif %}">首页</a></li>
+        <li><a href="{{ url_for('view_lessons') }}" class="{% if request.endpoint == 'view_lessons' %}active{% endif %}">查看课程</a></li>
+        <li><a href="{{ url_for('manage_vocabulary') }}" class="{% if request.endpoint == 'manage_vocabulary' %}active{% endif %}">管理词汇</a></li>
+        <li><a href="{{ url_for('process_pdf_route') }}" class="{% if request.endpoint == 'process_pdf_route' %}active{% endif %}">处理 PDF 文件</a></li>
+        <li><a href="{{ url_for('index') }}">返回首页</a></li>
+        <li><a href="{{ url_for('logout') }}">登出</a></li>
+    </ul>
+</aside>

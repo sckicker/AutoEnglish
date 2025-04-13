@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block title %}查看课程{% endblock %}
+
+{% block content %}
+<div class="admin-layout">
+    {% include 'admin/sidebar.html' %}
+    <div class="admin-content">
+        <h2>查看课程</h2>
+        <p>这里将显示课程列表，你可以进行查看、编辑或删除等操作。</p>
+        </div>
+</div>
+{% endblock %}
+
+{% block styles_extra %}
+<style>
+    .admin-layout {
+        display: flex;
+        min-height: 500px;
+    }
+
+    .admin-sidebar {
+        width: 200px;
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-right: 1px solid #eee;
+    }
+
+    .admin-sidebar h3 {
+        margin-top: 0;
+        margin-bottom: 15px;
+    }
+
+    .admin-sidebar ul {
+        list-style: none;
+        padding: 0;
+    }
+
+    .admin-sidebar li {
+        margin-bottom: 10px;
+    }
+
+    .admin-sidebar a {
+        text-decoration: none;
+        color: #333;
+        display: block;
+        padding: 8px 10px;
+        border-radius: 4px;
+    }
+
+    .admin-sidebar a:hover {
+        background-color: #e9ecef;
+    }
+
+    .admin-content {
+        flex-grow: 1;
+        padding: 20px;
+    }
+</style>
+{% endblock %}

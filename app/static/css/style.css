@@ -1,104 +1,162 @@
+/* 基础样式可以保留，但可以调整颜色和字体 */
 body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     line-height: 1.6;
     margin: 0;
     padding: 0;
-    background-color: #f4f4f4;
+    background-color: #f0f8ff;
     color: #333;
 }
 
 .container {
-    max-width: 800px;
-    margin: 20px auto;
-    padding: 20px;
+    max-width: 900px;
+    margin: 30px auto;
+    padding: 30px;
     background-color: #fff;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    border-radius: 12px;
 }
 
 header {
-    background-color: #4CAF50;
+    background-color: #3f51b5;
     color: white;
-    padding: 10px 0;
+    padding: 20px 0;
     text-align: center;
-    margin-bottom: 20px;
+    margin-bottom: 30px;
+    border-radius: 8px;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 2.5em;
+    font-weight: 500;
+}
+
+header h1 a {
+    color: white;
+    text-decoration: none;
 }
 
 footer {
     text-align: center;
-    margin-top: 30px;
-    padding-top: 15px;
+    margin-top: 40px;
+    padding-top: 20px;
     border-top: 1px solid #eee;
     font-size: 0.9em;
     color: #777;
 }
 
-h1, h2, h3 {
-    color: #333;
+h2 {
+    color: #3f51b5;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #3f51b5;
+    padding-bottom: 10px;
+}
+
+h3 {
+    color: #555;
+    margin-top: 20px;
+    margin-bottom: 15px;
+}
+
+form fieldset {
+    border: 1px solid #ccc;
+    padding: 20px;
+    margin-bottom: 25px;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+}
+
+form legend {
+    font-weight: bold;
+    padding: 0 10px;
+    color: #3f51b5;
+}
+
+.lesson-list-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.lesson-item {
+    margin-bottom: 0;
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+    border-radius: 4px;
+    background-color: white;
+}
+
+.lesson-item:last-child {
+    border-bottom: none;
 }
 
 form label, form input, form select, form button {
     display: block;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
 }
 
 form input[type="checkbox"] + label, form input[type="checkbox"] {
     display: inline-block;
     margin-right: 15px;
 }
-form fieldset {
-    border: 1px solid #ccc;
-    padding: 15px;
-    margin-bottom: 15px;
-    border-radius: 4px;
-}
-form legend {
-    font-weight: bold;
-    padding: 0 5px;
-}
-
 
 form input[type="number"], form select {
-    padding: 8px;
+    padding: 10px;
     border: 1px solid #ccc;
     border-radius: 4px;
-    width: 100px;
+    width: 120px;
 }
 
 form button, #submit-quiz-btn, #restart-quiz-btn {
     background-color: #4CAF50;
     color: white;
-    padding: 10px 15px;
+    padding: 12px 20px;
     border: none;
-    border-radius: 4px;
+    border-radius: 6px;
     cursor: pointer;
-    font-size: 1em;
+    font-size: 1.1em;
     transition: background-color 0.3s ease;
+    display: inline-block;
 }
 
 form button:hover, #submit-quiz-btn:hover, #restart-quiz-btn:hover {
     background-color: #45a049;
 }
 
+#start-quiz-btn {
+    background-color: #3f51b5;
+}
+
+#start-quiz-btn:hover {
+    background-color: #303f9f;
+}
+
 .question {
-    margin-bottom: 20px;
-    padding: 15px;
+    margin-bottom: 25px;
+    padding: 20px;
     border: 1px solid #ddd;
-    border-radius: 4px;
+    border-radius: 8px;
     background-color: #f9f9f9;
 }
 
 .question p {
     margin-top: 0;
     font-weight: bold;
+    color: #555;
 }
 
 .question input[type="text"] {
-    width: calc(100% - 22px); /* Account for padding */
-    padding: 10px;
+    width: calc(100% - 22px);
+    padding: 12px;
     border: 1px solid #ccc;
-    border-radius: 4px;
+    border-radius: 6px;
     font-size: 1em;
+}
+
+#results-area h2 {
+    color: #2e7d32;
 }
 
 #results-area ul {
@@ -107,11 +165,11 @@ form button:hover, #submit-quiz-btn:hover, #restart-quiz-btn:hover {
 }
 
 #results-area li {
-    background-color: #fff9f9;
-    border: 1px solid #fdd;
-    padding: 10px;
-    margin-bottom: 10px;
-    border-radius: 4px;
+    background-color: #f0fff0;
+    border: 1px solid #e0ffe0;
+    padding: 15px;
+    margin-bottom: 12px;
+    border-radius: 6px;
 }
 
 .correct {
@@ -130,23 +188,59 @@ form button:hover, #submit-quiz-btn:hover, #restart-quiz-btn:hover {
 
 #loading-indicator {
     text-align: center;
-    padding: 20px;
+    padding: 30px;
     font-style: italic;
-    color: #555;
+    color: #777;
 }
+
 .error {
-    color: red;
-    background-color: #ffebeb;
-    border: 1px solid red;
-    padding: 10px;
-    margin-top: 10px;
-    border-radius: 4px;
+    color: #d32f2f;
+    background-color: #ffebee;
+    border: 1px solid #d32f2f;
+    padding: 15px;
+    margin-top: 15px;
+    border-radius: 6px;
 }
 
 .preserve-newlines {
-    white-space: pre-line; /* 这个值会合并连续空格，但保留换行符 */
-    /* 或者使用 pre-wrap 如果你想保留所有空格和换行: */
-    /* white-space: pre-wrap; */
-    line-height: 1.6; /* 保留或调整行高 */
-    margin-bottom: 20px; /* 保留或调整边距 */
+    white-space: pre-line;
+    line-height: 1.7;
+    margin-bottom: 25px;
+}
+
+.quiz-options-container {
+    margin-bottom: 20px; /* 调整与选择测试范围之间的距离 */
+}
+
+/* 可以根据需要添加管理员登录表单的额外样式，例如增加外边距 */
+form[action="{{ url_for('admin_login') }}"] {
+    margin-top: 30px; /* 与选择课程部分隔开 */
+    padding: 15px;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+}
+
+.lesson-item span {
+    font-size: 0.85em;
+    color: #007bff; /* 更醒目的蓝色 */
+    background-color: #e7f2ff; /* 浅蓝色背景 */
+    padding: 2px 5px;
+    border-radius: 3px;
+    margin-left: 5px;
+}
+
+.lesson-item a + span { /* 确保只选中 a 标签后面的 span */
+    font-size: 0.85em;
+    color: #007bff;
+    background-color: #e7f2ff;
+    padding: 2px 5px;
+    border-radius: 3px;
+    margin-left: 5px;
+    transition: background-color 0.3s ease, color 0.3s ease; /* 添加过渡效果 */
+}
+
+.lesson-item a + span:hover {
+    background-color: #0056b3; /* 更深的蓝色背景 */
+    color: white; /* 鼠标悬停时文字变为白色 */
 }

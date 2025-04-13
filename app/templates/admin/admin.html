@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}管理面板{% endblock %}
+
+{% block content %}
+<div class="admin-layout">
+    <aside class="admin-sidebar">
+        <h3>管理菜单</h3>
+        <ul>
+            <li><a href="{{ url_for('admin') }}" class="active">首页</a></li> <li><a href="{{ url_for('view_lessons') }}">查看课程</a></li>
+            <li><a href="{{ url_for('manage_vocabulary') }}">管理词汇</a></li>
+            <li><a href="{{ url_for('process_pdf_route') }}">处理 PDF 文件</a></li>
+            <li><a href="{{ url_for('index') }}">返回首页</a></li>
+            <li><a href="{{ url_for('logout') }}">登出</a></li>
+        </ul>
+    </aside>
+    <div class="admin-content">
+        <h2>管理面板</h2>
+        <form action="{{ url_for('process_pdf_route') }}" method="POST">
+            <button type="submit">处理 PDF 文件</button>
+        </form>
+        <div id="processing-status"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block styles_extra %}
+<style>
+    .admin-layout {
+        display: flex;
+        min-height: 500px; /* 调整最小高度 */
+    }
+
+    .admin-sidebar {
+        width: 200px; /* 设置侧边栏宽度 */
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-right: 1px solid #eee;
+    }
+
+    .admin-sidebar h3 {
+        margin-top: 0;
+        margin-bottom: 15px;
+    }
+
+    .admin-sidebar ul {
+        list-style: none;
+        padding: 0;
+    }
+
+    .admin-sidebar li {
+        margin-bottom: 10px;
+    }
+
+    .admin-sidebar a {
+        text-decoration: none;
+        color: #333;
+        display: block;
+        padding: 8px 10px;
+        border-radius: 4px;
+    }
+
+    .admin-sidebar a:hover {
+        background-color: #e9ecef;
+    }
+
+    .admin-sidebar a.active {
+        background-color: #007bff; /* 选中时的背景色 */
+        color: white;
+    }
+
+    .admin-content {
+        flex-grow: 1; /* 内容区域占据剩余空间 */
+        padding: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block scripts_extra %}
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const form = document.querySelector('form');
+        const statusDiv = document.getElementById('processing-status');
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            statusDiv.textContent = '正在处理 PDF 文件，请稍候...';
+            try {
+                const response = await fetch(form.action, {
+                    method: form.method
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    statusDiv.textContent = data.message;
+                } else {
+                    statusDiv.textContent = `处理失败: ${data.error || '未知错误'}`;
+                }
+            } catch (error) {
+                statusDiv.textContent = `处理过程中发生错误: ${error.message}`;
+            }
+        });
+    });
+</script>
+{% endblock %}

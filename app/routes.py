@@ -5,6 +5,7 @@ from . import db # Import db instance from __init__.py
 import random
 import os
 from datetime import datetime
+from flask import Flask, render_template, request, redirect, url_for, session
 
 # If using Blueprints, define one:
 # bp = Blueprint('main', __name__)
@@ -69,11 +70,6 @@ def get_quiz():
     except Exception as e:
         current_app.logger.error(f"Error in /api/quiz: {e}")
         return jsonify({"error": "An internal server error occurred"}), 500
-
-@current_app.route('/admin')
-def admin_panel():
-    current_time = datetime.now()  # 获取当前时间
-    return render_template('admin.html', current_time=current_time)  # 将 current_time 传递给模板
 
 # app/routes.py (函数定义)
 
@@ -303,3 +299,49 @@ def view_lesson(lesson_number):
     # 同时传递 current_time 如果 base.html 需要它
     now = datetime.utcnow()
     return render_template('lesson_text.html', lesson=lesson_data, current_time=now)
+
+
+ADMIN_USERNAME = "jeff"
+ADMIN_PASSWORD = "su"
+
+@current_app.route('/admin_login', methods=['POST'])
+def admin_login():
+    username = request.form['username']
+    password = request.form['password']
+
+    if username == ADMIN_USERNAME and password == ADMIN_PASSWORD:
+        session['is_admin'] = True
+        return redirect(url_for('admin'))
+    else:
+        error = '用户名或密码错误'
+        print(error)
+        return redirect(url_for('index')) # 如果不是管理员，重定向到首页
+
+@current_app.route('/admin')
+def admin():
+    current_time = datetime.now()  # 获取当前时间
+    if session.get('is_admin'):
+        return render_template('admin/admin.html', current_time=current_time)  # 将 current_time 传递给模板
+    else:
+        return redirect(url_for('index')) # 如果不是管理员，重定向到首页
+
+@current_app.route('/admin/lessons')
+def view_lessons():
+    if session.get('is_admin'):
+        # 这里添加获取和展示课程数据的逻辑
+        return render_template('admin/view_lessons.html')
+    else:
+        return redirect(url_for('index'))
+
+@current_app.route('/admin/vocabulary')
+def manage_vocabulary():
+    if session.get('is_admin'):
+        # 这里添加管理词汇数据的逻辑
+        return render_template('admin/manage_vocabulary.html')
+    else:
+        return redirect(url_for('index'))
+
+@current_app.route('/admin/logout')
+def logout():
+    session.pop('is_admin', None)
+    return redirect(url_for('index'))

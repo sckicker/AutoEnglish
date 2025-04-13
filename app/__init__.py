@@ -7,12 +7,16 @@ import os
 import logging
 from logging.handlers import RotatingFileHandler
 import sys # Import sys for potential console encoding checks/fixes
+import secrets
 
+secret_key = secrets.token_hex(32)  # 生成一个 64 字符的十六进制密钥（256 位）
+print(secret_key)
 db = SQLAlchemy()
 
 def create_app(config_class=Config):
     """Application Factory Pattern"""
     app = Flask(__name__, instance_relative_config=True)
+    app.secret_key = secret_key
     app.config.from_object(config_class)
 
     # --- Logging Setup Start ---

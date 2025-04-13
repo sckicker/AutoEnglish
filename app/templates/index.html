@@ -1,78 +1,77 @@
 {# app/templates/index.html #}
-{% extends "base.html" %} {# 继承基础模板 #}
+{% extends "base.html" %}
 
-{# 设置页面浏览器标题 #}
 {% block title %}选择课程 - NCE Vocab Quiz{% endblock %}
 
-{# 定义页面主要内容 #}
 {% block content %}
 
-{# 将 container 移到 base.html 的 <main> 标签可能更好，但放在这里也可以 #}
-{# <div class="container"> #}
+    <h2>新概念英语词汇学习平台</h2>
+    <p class="lead" style="margin-bottom: 20px; color: #555;">欢迎使用新概念英语词汇学习平台，选择课程开始你的词汇测试吧！</p>
 
-    <h2>选择测试范围 (Select Test Scope)</h2>
+    <div class="quiz-options-container">
+        <h3>词汇测试选项</h3>
+        <div style="margin-bottom: 10px;">
+            <label for="num-questions">题目数量:</label>
+            <input type="number" id="num-questions" value="10" min="1" max="50">
+        </div>
+        <div style="margin-bottom: 10px;">
+            <label for="quiz-type">测试类型:</label>
+            <select id="quiz-type">
+                <option value="cn_to_en" selected>中译英 (写英文)</option>
+                <option value="en_to_cn">英译中 (写中文)</option>
+            </select>
+        </div>
+        <div>
+             <button type="button" id="start-quiz-btn">开始单词测试</button>
+        </div>
+    </div>
 
-    {# 课程选择和测试选项表单 #}
+    <hr style="margin-top: 30px; margin-bottom: 30px;">
+
+    <h3>选择测试范围</h3>
     <form id="lesson-selector">
         <fieldset>
-            <legend>选择课程 (Select Lessons for Quiz and View Text)</legend>
-            <div class="lesson-list-container"> {# 用于包裹课程列表的容器 #}
-
-                {# 检查后端是否传递了 lessons 列表 #}
+            <legend>选择课程</legend>
+            <div class="lesson-list-container">
                 {% if lessons %}
-                    {# 如果有课程，遍历并显示 #}
                     {% for lesson_num in lessons %}
-                        <div class="lesson-item" style="margin-bottom: 8px; padding: 5px; border-bottom: 1px solid #eee;">
-                            {# 复选框，用于选择参加词汇测试的课程 #}
+                        <div class="lesson-item">
                             <input type="checkbox" name="lesson" value="{{ lesson_num }}" id="lesson-check-{{ lesson_num }}" style="margin-right: 10px;">
-
-                            {# 标签与复选框关联，包含课程链接 #}
                             <label for="lesson-check-{{ lesson_num }}">
-                                {# 指向该课文页面的链接 #}
                                 <a href="{{ url_for('view_lesson', lesson_number=lesson_num) }}" title="查看 Lesson {{ lesson_num }} 课文">
                                     Lesson {{ lesson_num }}
                                 </a>
-                                {# 提示文字 #}
-                                <span style="font-size: 0.9em; color: #555;"> (查看课文 / View Text)</span>
+                                <span style="font-size: 0.9em; color: #777;"> (View Text)</span>
                             </label>
                         </div>
-                    {% endfor %} {# 结束 for 循环 #}
-
-                {% else %} {# 如果 lessons 列表为空 #}
+                    {% endfor %}
+                {% else %}
                     <p>数据库中没有找到课程。请先处理 PDF 文件。</p>
-                    {# 提供一个（管理员）按钮来触发 PDF 处理 #}
                     <form action="{{ url_for('process_pdf_route') }}" method="post" style="margin-top: 15px;">
                          <button type="submit">处理 NCE Book 2 PDF (管理员)</button>
                     </form>
-
-                {% endif %} {# 正确关闭 if lessons 块 #}
-
-            </div> {# End lesson-list-container #}
+                {% endif %}
+            </div>
         </fieldset>
-
-        {# 词汇测试选项 #}
-        <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee;">
-            <h3>词汇测试选项 (Vocabulary Quiz Options)</h3>
-            <div>
-                <label for="num-questions" style="display: inline-block; margin-right: 10px;">题目数量:</label>
-                <input type="number" id="num-questions" value="10" min="1" max="50" style="width: 60px;">
-            </div>
-            <div style="margin-top: 10px;">
-                <label for="quiz-type" style="display: inline-block; margin-right: 10px;">测试类型:</label>
-                <select id="quiz-type">
-                    <option value="cn_to_en" selected>中译英 (写英文)</option>
-                    <option value="en_to_cn">英译中 (写中文)</option>
-                </select>
-            </div>
-            <div style="margin-top: 20px;">
-                 {# 启动词汇测试的按钮 #}
-                <button type="button" id="start-quiz-btn">开始单词测试 (Start Vocabulary Quiz)</button>
-            </div>
-        </div>
-    </form> {# 结束表单 #}
+    </form>
 
     {# 分隔线 #}
-    <hr style="margin-top: 30px; margin-bottom: 30px;">
+    <hr style="margin-top: 30px; margin-bottom: 30px; clear: both;">
+
+    <h3>管理员登录</h3>
+    <form action="{{ url_for('admin_login') }}" method="POST">
+        <div>
+            <label for="username">用户名:</label>
+            <input type="text" id="username" name="username" required>
+        </div>
+        <div style="margin-top: 10px;">
+            <label for="password">密码:</label>
+            <input type="password" id="password" name="password" required>
+        </div>
+        <div style="margin-top: 15px;">
+            <button type="submit">登录</button>
+        </div>
+    </form>
 
     {# 用于通过 JavaScript 加载测试题的区域 (默认隐藏) #}
     <div id="quiz-area" class="hidden">
@@ -89,7 +88,7 @@
         <h3>错题回顾:</h3>
         <ul id="incorrect-list" style="padding-left: 20px;">
             </ul>
-        <button type="button" id="restart-quiz-btn" style="margin-top: 15px;">重新开始 (Restart)</button>
+        <button type="button" id="restart-quiz-btn" style="margin-top: 15px;">重新开始</button>
     </div>
 
     {# 加载指示器 (默认隐藏) #}
@@ -100,6 +99,4 @@
     {# 错误消息显示区域 (默认隐藏) #}
      <div id="error-message" class="hidden error"></div>
 
-{# </div> End container #} {# 如果 container 在 base.html 中，这里就不需要结束标签 #}
-
-{% endblock %} {# 结束 content 块 #}
+{% endblock %}
