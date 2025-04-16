@@ -1,8 +1,42 @@
-Flask
-Flask-SQLAlchemy>=2.5  # If using SQLAlchemy ORM
-pdfminer.six>=20220506 # Or PyPDF2, choose one or use both if needed
-python-dotenv>=0.19    # Optional, for loading .env files
-# Add other libraries like gunicorn for production deployment
-torch
-chattts
-ipython
+# --- Core Flask Framework ---
+Flask>=2.0 # Base web framework
+
+# --- Flask Extensions ---
+Flask-SQLAlchemy>=2.5   # Database ORM integration
+Flask-Migrate>=3.0      # Database schema migrations (requires Alembic)
+Flask-Login>=0.5        # User session management (authentication)
+Flask-WTF>=1.0          # Forms handling and CSRF protection (requires WTForms)
+WTForms>=3.0            # Base library for Flask-WTF forms
+email-validator>=1.1    # Required by Flask-WTF's Email validator
+
+# --- Database Drivers (Choose one if not using SQLite) ---
+# psycopg2-binary         # For PostgreSQL
+# PyMySQL                 # For MySQL/MariaDB
+
+# --- PDF Processing ---
+pdfminer.six>=20221105  # PDF text and layout analysis (Updated version specifier)
+# PyPDF2                 # Alternative/complementary PDF library if needed
+
+# --- Environment & Configuration ---
+python-dotenv>=0.19     # Loads environment variables from .env files
+
+# --- Development Tools ---
+ipython                 # Enhanced Python interactive shell (useful for 'flask shell')
+
+# --- AI / ML / TTS (Large Dependencies - Install Separately if Needed) ---
+# These can significantly increase environment size and complexity.
+# Consider installing them only if the specific features are being used.
+# torch                   # Deep learning framework
+# chattts                 # Text-to-Speech library (Verify installation method - might be non-PyPI)
+
+# --- Production WSGI Server (Examples - Uncomment one) ---
+# gunicorn                # Common choice for Linux/macOS production deployment
+# waitress                # Common choice for Windows production deployment
+
+# --- Other Implicit Dependencies (Usually handled by the above) ---
+# Werkzeug              # WSGI utility library (Core Flask dependency)
+# Jinja2                # Templating engine (Core Flask dependency)
+# itsdangerous          # Data signing (Core Flask dependency)
+# click                 # Command-line interface toolkit (Core Flask dependency)
+# SQLAlchemy            # ORM library (Flask-SQLAlchemy dependency)
+# Alembic               # Database migration tool (Flask-Migrate dependency)
