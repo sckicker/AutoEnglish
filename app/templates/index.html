@@ -1,4 +1,4 @@
-{# app/templates/index.html - 完整代码 V1.2 (配合 CSS V1.3) #}
+{# app/templates/index.html - 完整代码 V1.2 (配合 CSS V1.4) - 移除了 admin_login_simple 表单 #}
 {% extends "base.html" %}
 
 {% block title %}首页 - 新概念英语学习平台{% endblock %}
@@ -7,8 +7,8 @@
 {# 使用 Bootstrap 容器 #}
 <div class="container mt-4 mb-5">
 
-    {# 1. 新的页面顶部介绍区 #}
-    <div class="page-title-section text-center"> {# 应用新定义的 CSS 类 #}
+    {# --- 1. 新的页面顶部介绍区 ('Hero Section') --- #}
+    <div class="hero-section text-center"> {# 应用新定义的 CSS 类 #}
         <h2>新概念英语词汇学习平台</h2>
         <p class="lead">选择下方课程查看课文，或勾选课程后进行词汇测试。</p>
     </div>
@@ -26,16 +26,16 @@
                             <div class="card h-100 shadow-sm"> {# 卡片样式 #}
                                 <div class="card-body d-flex flex-column">
                                     <h5 class="card-title mb-3">Lesson {{ lesson_num }}</h5>
-                                    <div class="mt-auto pt-2 border-top"> {# 操作区推到底部 #}
-                                        <div class="d-grid gap-2">
+                                    <div class="mt-auto pt-2"> {# 操作区推到底部 (移除border-top让CSS控制) #}
+                                        <div class="d-grid gap-2 mb-2"> {# 按钮间距 #}
                                             <a href="{{ url_for('view_lesson', lesson_number=lesson_num) }}" class="btn btn-sm btn-outline-primary" title="查看 Lesson {{ lesson_num }} 课文">
-                                                <i class="bi bi-book-half"></i> 查看课文 (View Text)
+                                                <i class="bi bi-book-half"></i> 查看课文
                                             </a>
                                         </div>
-                                        <div class="form-check mt-2">
+                                        <div class="form-check">
                                             <input class="form-check-input" type="checkbox" name="lesson" value="{{ lesson_num }}" id="lesson-check-{{ lesson_num }}">
                                             <label class="form-check-label small" for="lesson-check-{{ lesson_num }}">
-                                                选择测验 (Select for Quiz)
+                                                选择测验
                                             </label>
                                         </div>
                                     </div>
@@ -56,7 +56,7 @@
 
 
     {# 3. 词汇测试选项区域 #}
-    <div class="quiz-options-container mt-4 p-3 rounded" id="quiz-options-section"> {# <--- JS 需要的 ID #}
+    <div class="mt-4 p-3 rounded" id="quiz-options-section"> {# <--- JS 需要的 ID (应用CSS中定义的样式) #}
         <h3 class="mb-3">词汇测试选项 (Quiz Options)</h3>
         <div class="row g-3 align-items-center mb-3">
             <div class="col-auto">
@@ -115,13 +115,14 @@
      <div id="error-message" class="alert alert-danger hidden mt-4" role="alert"></div>
 
 
-    {# 5. 管理员登录区域 #}
+    {# 5. 管理员操作区域 (移除了登录表单) #}
     <div class="admin-login-area mt-5 pt-4 border-top text-muted small">
         <details>
             <summary style="cursor: pointer;">管理员操作 (Admin Actions)</summary>
             <div class="mt-3 p-3 bg-light border rounded" style="max-width: 400px;">
+                {# --- 登录表单已移除 ---
                 <h4 class="h6">管理员登录</h4>
-                <form action="{{ url_for('admin_login') }}" method="POST">
+                <form action="{{ url_for('admin_login_simple') }}" method="POST">
                      <div class="mb-2">
                         <label for="username" class="form-label">用户名:</label>
                         <input type="text" class="form-control form-control-sm" id="username" name="username" required>
@@ -133,8 +134,10 @@
                     <button type="submit" class="btn btn-sm btn-secondary">登录</button>
                 </form>
                 <hr>
+                --- 登录表单结束 --- #}
+
                  <h4 class="h6">处理 PDF (需要登录或权限)</h4>
-                 <form action="{{ url_for('process_pdf_route') }}" method="post">
+                 <form action="{{ url_for('process_pdf_route_admin') }}" method="post"> {# 指向 process_pdf_route_admin #}
                      <button type="submit" class="btn btn-sm btn-warning">处理 NCE Book 2 PDF</button>
                  </form>
             </div>
@@ -143,7 +146,7 @@
 
 </div> {# End container #}
 
-{# 模态框 (保持不变) #}
+{# 模态框 #}
 <div class="modal fade" id="adminActionModal" tabindex="-1" aria-labelledby="adminActionModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -152,10 +155,11 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p>处理 PDF 文件是管理员操作。请先登录。</p>
-                 <form action="{{ url_for('process_pdf_route') }}" method="post">
+                <p>处理 PDF 文件是管理员操作。请先登录或确认权限。</p>
+                 {# 这个模态框里的按钮只是示例，实际处理应由登录后的页面触发 #}
+                 {# <form action="{{ url_for('process_pdf_route_admin') }}" method="post">
                      <button type="submit" class="btn btn-warning">确认处理 PDF</button>
-                 </form>
+                 </form> #}
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
@@ -167,10 +171,11 @@
 {% endblock %}
 
 {% block scripts_extra %}
-{# JS for enabling/disabling start button (保持不变) #}
+{# JS for enabling/disabling start button #}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const startQuizBtn = document.getElementById('start-quiz-btn');
+    // Ensure the selector targets checkboxes within the correct form/container
     const lessonCheckboxes = document.querySelectorAll('#lesson-selector input[name="lesson"]');
     const startQuizHelp = document.getElementById('start-quiz-help');
 

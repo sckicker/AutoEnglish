@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chrome Speech Synthesis Test</title>
+</head>
+<body>
+    <h1>Chrome 语音合成测试</h1>
+    <button id="speakButton">朗读 "你好"</button>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const speakButton = document.getElementById('speakButton');
+            const synth = window.speechSynthesis;
+
+            if ('speechSynthesis' in window) {
+                speakButton.addEventListener('click', () => {
+                    const utterThis = new SpeechSynthesisUtterance("你好");
+                    utterThis.lang = 'zh-CN'; // 设置语言为中文
+                    synth.speak(utterThis);
+                });
+            } else {
+                console.error('当前浏览器不支持语音合成。');
+                speakButton.disabled = true;
+                speakButton.textContent = '不支持';
+            }
+        });
+    </script>
+</body>
+</html>

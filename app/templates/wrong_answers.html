@@ -1,0 +1,47 @@
+{# app/templates/wrong_answers.html - 错题本页面 #}
+{% extends "base.html" %}
+
+{% block title %}错题本 - 新概念学习平台{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">我的错题本 (My Wrong Answers)</h2>
+
+{% if wrong_answers %}
+    <p class="text-muted mb-3">这里记录了你答错过的单词，可以经常复习哦！(Review the words you got wrong.)</p>
+    {# 使用 List Group 展示错题 #}
+    <div class="list-group shadow-sm">
+        {% for wrong in wrong_answers %}
+            <div class="list-group-item list-group-item-action flex-column align-items-start">
+                <div class="d-flex w-100 justify-content-between">
+                    <h5 class="mb-1">
+                        {# 链接到单词所在的课文页面 #}
+                        <a href="{{ url_for('view_lesson', lesson_number=wrong.vocabulary_item.lesson_number) }}" class="text-decoration-none">
+                            <span class="fw-bold">{{ wrong.vocabulary_item.english_word }}</span>
+                            {% if wrong.vocabulary_item.part_of_speech %}
+                                <small class="text-muted">({{ wrong.vocabulary_item.part_of_speech }})</small>
+                            {% endif %}
+                        </a>
+                    </h5>
+                    {# 显示最后出错时间，需要格式化 #}
+                    <small class="text-muted" title="{{ wrong.timestamp_last_wrong.strftime('%Y-%m-%d %H:%M:%S') if wrong.timestamp_last_wrong else '' }}">
+                        Last wrong: {{ wrong.timestamp_last_wrong.strftime('%Y-%m-%d') if wrong.timestamp_last_wrong else 'N/A' }}
+                    </small>
+                </div>
+                <p class="mb-1">{{ wrong.vocabulary_item.chinese_translation }}</p>
+                <small class="text-muted">来自 (From) Lesson {{ wrong.vocabulary_item.lesson_number }} | 错误次数 (Count): {{ wrong.incorrect_count or 1 }}</small>
+                 {# Optional: Add a button to re-quiz this specific word or lesson #}
+                 {# <button class="btn btn-sm btn-outline-warning float-end">Re-Quiz</button> #}
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="alert alert-success" role="alert">
+      太棒了！你的错题本是空的。(Great! Your wrong answer list is empty.)
+    </div>
+{% endif %}
+
+{# Optional: Add button to quiz all wrong answers #}
+{# <div class="mt-4 text-center"> <button class="btn btn-warning">测试所有错题 (Quiz All Wrong Answers)</button> </div> #}
+
+
+{% endblock %}

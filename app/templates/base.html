@@ -1,70 +1,151 @@
-{# app/templates/base.html - Updated with Bootstrap 5 & Icons CDN #}
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}NCE Vocab Quiz{% endblock %}</title>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    {# --- 添加 CSRF Token Meta Tag (如果还没加的话) --- #}
+    <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    {# --- Bootstrap 5 CSS (via CDN) --- #}
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-    {# --- Bootstrap Icons CSS (via CDN) --- #}
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    {# --- End Bootstrap Imports --- #}
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    {# --- Bootstrap Icons CSS --- #}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
 
-    {# --- Your Custom CSS - Placed AFTER Bootstrap CSS --- #}
+    {# --- 你自定义的 CSS (如果需要) --- #}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    {# --- End Custom CSS --- #}
 
-    {# --- Additional Head Content Block --- #}
-    {% block head_extra %}{% endblock %}
-    {% block styles_extra %}{% endblock %} {# Kept your styles_extra block #}
-    {# --- End Head Content Block --- #}
+    <title>{% block title %}NCE Vocab Project{% endblock %}</title>
+    {% block styles_extra %}{% endblock %} {# 用于页面特定 CSS #}
 </head>
 <body>
-    {# --- Header Section (Added some Bootstrap classes for basic styling) --- #}
-    <header class="bg-primary text-white p-3 mb-4 shadow-sm"> {# Changed bg color, kept padding/margin/shadow #}
-        <div class="container"> {# Wrapped in container for consistent width #}
-            <h1 class="h3 mb-0"> {# Adjusted heading size #}
-                {# Removed inline style, rely on Bootstrap/custom CSS #}
-                <a href="{{ url_for('index') }}" class="text-white text-decoration-none">
-                     <i class="bi bi-journal-bookmark-fill"></i> {# Changed icon #}
-                     新概念英语词汇学习平台
-                </a>
-            </h1>
-        </div>
-    </header>
-    {# --- End Header --- #}
 
-    {# --- Main Content Area --- #}
-    {# Removed class="container" from here, assuming you want full-width header/footer #}
-    {# and content container managed within the block or specific page #}
-    <main>
-        {% block content %}
-        {% endblock %}
+    {# =============== 开始：修改导航栏 =============== #}
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4"> {# 使用深色背景，底部加边距 #}
+        <div class="container-fluid">
+            {# Logo 或网站名称 #}
+            <a class="navbar-brand" href="{{ url_for('index') }}">新概念词汇平台</a>
+
+            {# 移动端切换按钮 #}
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            {# 导航栏内容 #}
+            <div class="collapse navbar-collapse" id="navbarNav">
+                {# --- 左侧导航链接 --- #}
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link {{ 'active' if request.endpoint == 'index' else '' }}" aria-current="page" href="{{ url_for('index') }}">
+                            <i class="bi bi-house-door"></i> 首页 (Home)
+                        </a>
+                    </li>
+                     <li class="nav-item">
+                         <a class="nav-link {{ 'active' if request.endpoint == 'view_lessons' else '' }}" href="{{ url_for('view_lessons') }}">
+                             <i class="bi bi-list-columns-reverse"></i> 课程列表
+                         </a>
+                     </li>
+                    {# 你可以在这里添加其他主要的导航链接 #}
+                </ul>
+
+                {# --- 右侧用户相关链接 --- #}
+                <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+                    {% if current_user.is_authenticated %}
+                        {# --- 如果用户已登录 --- #}
+
+                        {# 管理面板链接 (仅管理员可见) #}
+                        {% if current_user.is_admin %} {# 假设 User 模型有 is_admin 属性 #}
+                            <li class="nav-item">
+                                {# 高亮管理后台相关页面 #}
+                                <a class="nav-link {{ 'active' if request.endpoint.startswith('admin_') or request.endpoint in ['manage_vocabulary', 'manage_users'] else '' }}" href="{{ url_for('admin_dashboard') }}">
+                                    <i class="bi bi-shield-lock"></i> 管理面板
+                                </a>
+                            </li>
+                        {% endif %}
+
+                        {# 学习记录和错题本链接 (所有登录用户可见) #}
+                         <li class="nav-item">
+                             <a class="nav-link {{ 'active' if request.endpoint == 'history' else '' }}" href="{{ url_for('history') }}"><i class="bi bi-clock-history"></i> 测试历史</a>
+                         </li>
+                         <li class="nav-item">
+                             <a class="nav-link {{ 'active' if request.endpoint == 'wrong_answers' else '' }}" href="{{ url_for('wrong_answers') }}"><i class="bi bi-x-octagon"></i> 错题本</a>
+                         </li>
+
+                        {# 用户名和登出下拉菜单 #}
+                         <li class="nav-item dropdown">
+                           <a class="nav-link dropdown-toggle" href="#" id="navbarUserDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                             <i class="bi bi-person-circle"></i> {{ current_user.username }}
+                           </a>
+                           <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarUserDropdown">
+                             {# 可以在这里添加“个人资料”等链接 #}
+                             {# <li><a class="dropdown-item" href="#">个人资料</a></li> #}
+                             {# <li><hr class="dropdown-divider"></li> #}
+                             <li>
+                                 {# --- 正确的登出链接 --- #}
+                                 <a class="dropdown-item" href="{{ url_for('logout') }}">
+                                     <i class="bi bi-box-arrow-right"></i> 登出 (Logout)
+                                 </a>
+                             </li>
+                           </ul>
+                         </li>
+
+                    {% else %}
+                        {# --- 如果用户未登录 --- #}
+                        <li class="nav-item">
+                            <a class="nav-link {{ 'active' if request.endpoint == 'login' else '' }}" href="{{ url_for('login') }}">
+                                <i class="bi bi-box-arrow-in-right"></i> 登录 (Login)
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {{ 'active' if request.endpoint == 'register' else '' }}" href="{{ url_for('register') }}">
+                                <i class="bi bi-person-plus"></i> 注册 (Register)
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>{# / .navbar-collapse #}
+        </div>{# / .container-fluid #}
+    </nav>
+    {# =============== 结束：修改导航栏 =============== #}
+
+
+    {# --- Flash 消息显示区域 --- #}
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category or 'info' }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+    {# -------------------------- #}
+
+
+    {# --- 主要页面内容块 --- #}
+    <main role="main" class="container">
+        {% block content %}{% endblock %}
     </main>
-    {# --- End Main Content Area --- #}
+    {# ---------------------- #}
 
-    {# --- Footer Section (Added Bootstrap classes) --- #}
-    <footer class="container mt-5 py-4 border-top text-center text-muted"> {# Added more padding #}
-        {% if current_time %}
-        <p class="mb-0">&copy; {{ current_time.year }} NCE Vocab Project. (请注意《新概念英语》版权)</p> {# Removed default paragraph margin #}
-        {% else %}
-        <p class="mb-0">NCE Vocab Project. (请注意《新概念英语》版权)</p>
-        {% endif %}
+
+    {# --- 页脚 (可选) --- #}
+    <footer class="footer mt-auto py-3 bg-light">
+      <div class="container text-center">
+        <span class="text-muted">NCE Vocab Project © {{ current_time.year if current_time else '2024' }}. 请注意《新概念英语》版权。</span>
+      </div>
     </footer>
-    {# --- End Footer --- #}
+    {# ----------------- #}
 
-    {# --- Bootstrap 5 JavaScript Bundle (Popper included) - Placed before closing </body> --- #}
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-    {# --- End Bootstrap JS --- #}
 
-    {# --- Your Custom JS (main.js included via url_for) --- #}
-    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
-    {# --- End Custom JS --- #}
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-    {# --- Additional Scripts Block --- #}
+    {# 用于页面特定 JavaScript #}
     {% block scripts_extra %}{% endblock %}
-    {# --- End Scripts Block --- #}
+
 </body>
 </html>

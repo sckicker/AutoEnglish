@@ -1,5 +1,8 @@
-Flask>=2.0
+Flask
 Flask-SQLAlchemy>=2.5  # If using SQLAlchemy ORM
 pdfminer.six>=20220506 # Or PyPDF2, choose one or use both if needed
 python-dotenv>=0.19    # Optional, for loading .env files
 # Add other libraries like gunicorn for production deployment
+torch
+chattts
+ipython

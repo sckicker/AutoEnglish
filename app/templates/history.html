@@ -1,0 +1,85 @@
+{# app/templates/history.html - 测试历史记录页面 #}
+{% extends "base.html" %}
+
+{% block title %}测试历史 - 新概念学习平台{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">我的测试历史 (My Quiz History)</h2>
+
+{% if attempts and attempts.items %}
+    <div class="table-responsive shadow-sm rounded">
+        <table class="table table-striped table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">测试时间 (Time)</th>
+                    <th scope="col">测试课程 (Lessons)</th>
+                    <th scope="col">得分 (Score)</th>
+                    <th scope="col">总题数 (Total)</th>
+                    <th scope="col">正确率 (Accuracy)</th>
+                    <th scope="col">类型 (Type)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {# 遍历当前页的记录 #}
+                {% for attempt in attempts.items %}
+                <tr>
+                    <th scope="row">{{ loop.index + attempts.per_page * (attempts.page - 1) }}</th>
+                    {# 格式化时间戳 - 需要后端传递格式化好的，或者使用 JS/Moment.js/自定义过滤器 #}
+                    <td><span title="{{ attempt.timestamp.strftime('%Y-%m-%d %H:%M:%S') if attempt.timestamp else '' }}">{{ attempt.timestamp.strftime('%Y-%m-%d %H:%M') if attempt.timestamp else 'N/A' }}</span></td>
+                    <td>{{ attempt.lessons_attempted or 'N/A' }}</td>
+                    <td>{{ attempt.score }}</td>
+                    <td>{{ attempt.total_questions }}</td>
+                    <td>
+                        {% if attempt.total_questions and attempt.total_questions > 0 %}
+                            {% set accuracy = (attempt.score * 100 / attempt.total_questions) | round(1) %}
+                            <span class="badge rounded-pill {{ 'bg-success' if accuracy >= 80 else ('bg-warning text-dark' if accuracy >= 60 else 'bg-danger') }}">
+                                {{ accuracy }}%
+                            </span>
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                    <td>{{ attempt.quiz_type or 'N/A' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {# --- 分页导航 --- #}
+    {% if attempts.pages > 1 %}
+    <nav aria-label="Quiz history navigation" class="mt-4">
+        <ul class="pagination justify-content-center">
+            {# 上一页链接 #}
+            <li class="page-item {{ 'disabled' if not attempts.has_prev else '' }}">
+                <a class="page-link" href="{{ url_for('history', page=attempts.prev_num) if attempts.has_prev else '#'}}">&laquo; 上一页</a>
+            </li>
+            {# 中间页码 #}
+            {% for page_num in attempts.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                {% if page_num %}
+                    {% if attempts.page == page_num %}
+                        <li class="page-item active" aria-current="page"><span class="page-link">{{ page_num }}</span></li>
+                    {% else %}
+                         <li class="page-item"><a class="page-link" href="{{ url_for('history', page=page_num) }}">{{ page_num }}</a></li>
+                    {% endif %}
+                {% else %}
+                     <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+            {% endfor %}
+            {# 下一页链接 #}
+            <li class="page-item {{ 'disabled' if not attempts.has_next else '' }}">
+                <a class="page-link" href="{{ url_for('history', page=attempts.next_num) if attempts.has_next else '#'}}">下一页 &raquo;</a>
+            </li>
+        </ul>
+    </nav>
+    {% endif %}
+    {# --- 分页结束 --- #}
+
+{% else %}
+    <div class="alert alert-info" role="alert">
+      你还没有任何测试记录。(You don't have any quiz history yet.)
+    </div>
+{% endif %}
+
+{% endblock %}

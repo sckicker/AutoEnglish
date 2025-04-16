@@ -1,21 +1,89 @@
-# Virtual Environment
+# --- Python ---
+# Virtual Environment directory
 venv/
+env/
+ENV/
+# Compiled Python files (bytecode)
 *.pyc
-__pycache__/
-
-# Instance Folder (if it contains secrets or instance-specific DBs)
-instance/
-# If your DB file is sensitive or large, add it:
-# instance/nce_vocab.db
-
-# Build artifacts
+*.pyo
+*.pyd
+# C extensions
+*.so
+# Distribution / packaging
 dist/
 build/
+wheels/
 *.egg-info/
+pip-wheel-metadata/
+share/python-wheels/
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
 
-# Environment files
+# --- Python Caches ---
+__pycache__/
+.python-version
+
+# --- Database ---
+# SQLite database files (often in instance folder or project root)
+# These contain runtime data, can be large, and cause merge conflicts.
+instance/nce_vocab.db
+*.sqlite
+*.sqlite3
+# Ignore the entire instance folder if it ONLY contains instance-specific data
+# If instance/ contains non-sensitive config templates, adjust this rule.
+instance/
+
+# --- Environment Variables ---
+# Contains secrets and environment-specific settings!
 .env
+.flaskenv
 
-# OS-specific files
+# --- IDE / Editor Configuration ---
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+nbproject/
+*.swp # Vim swap files
+
+# --- Log Files ---
+*.log
+logs/
+
+# --- Testing ---
+.coverage*
+coverage.xml
+htmlcov/
+.pytest_cache/
+nosetests.xml
+
+# --- Operating System Files ---
+# macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+# Thumbnails
+._*
+# Files that might appear on external disks
+.Spotlight-V100
+.Trashes
+# Windows
 Thumbs.db
+ehthumbs.db
+Desktop.ini
+# Linux backup files
+*~
+
+# --- Node Modules (if using Node.js for frontend build steps) ---
+# node_modules/
+# npm-debug.log
+# yarn-error.log
+# yarn-debug.log
+
+# --- Other ---
+# Upload folder (if storing uploads within the project structure)
+# uploads/ # Uncomment if you have an 'uploads' folder to ignore
+
+# If you generate static files via a build process, ignore the output dir
+# static/dist/ # Example

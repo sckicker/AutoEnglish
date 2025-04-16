@@ -1,4 +1,4 @@
-{# app/templates/lesson_text.html V1.2 - Added Lesson Quiz Functionality #}
+{# app/templates/lesson_text.html V1.2 - Added Lesson Quiz Functionality - WITH VOICE SPEECH #}
 {% extends "base.html" %} {# 继承基础模板 #}
 
 {# 设置页面标题 #}
@@ -21,6 +21,11 @@
     <div class="col-md-6">
         <div class="p-3 border rounded-2 bg-white h-100">
             <h4 class="mb-3 pb-2 border-bottom"><i class="bi bi-file-text"></i> 课文 (Text)</h4>
+            <div>
+                <label for="voice-select" class="form-label">选择语音:</label>
+                <select id="voice-select" class="form-select mb-2"></select>
+                <button id="speak-button" class="btn btn-sm btn-outline-primary mb-2"><i class="bi bi-play-fill"></i> 朗读</button>
+            </div>
             <div class="lesson-text english-text preserve-newlines">
                 {% if lesson.text_en %}{{ lesson.text_en | safe }}{% else %}<p class="text-muted"><em>English text not available.</em></p>{% endif %}
             </div>
@@ -109,90 +114,152 @@
 {# --- 特定页面 JS --- #}
 {% block scripts_extra %}
 <script>
-// 这个脚本块会在 main.js 加载后执行
+    console.log('Script block is reached');
+    document.addEventListener('DOMContentLoaded', () => {
+        if ('speechSynthesis' in window) {
+            const synth = window.speechSynthesis;
+            const voiceSelect = document.getElementById('voice-select');
+            const textToSpeak = document.querySelector('.lesson-text.english-text');
+            const speakButton = document.getElementById('speak-button');
+            let voices = [];
 
-// 获取本页特定的元素
-const startLessonQuizBtn = document.getElementById('start-lesson-quiz-btn');
-const quizArea = document.getElementById('quiz-area');
-const resultsArea = document.getElementById('results-area');
-const restartQuizBtn = document.getElementById('restart-quiz-btn'); // 重命名或复用逻辑
+            function populateVoiceList() {
+                voices = synth.getVoices();
+                voiceSelect.innerHTML = '';
+                voices.forEach(voice => {
+                    const option = document.createElement('option');
+                    option.textContent = `${voice.name} (${voice.lang})`;
+                    option.value = voice.name;
+                    voiceSelect.appendChild(option);
+                });
+            }
 
-// 假设 main.js 中定义了:
-// currentQuizData, userAnswers, displayQuestions, submitQuiz,
-// showLoading, hideLoading, showError, hideError
-// 我们需要一个新的启动函数和调整 restart
+            populateVoiceList();
+            if (speechSynthesis.onvoiceschanged !== undefined) {
+                speechSynthesis.onvoiceschanged = populateVoiceList;
+            }
 
-async function startLessonQuiz(lessonNumber) {
-    hideError();
-    resultsArea.classList.add('hidden'); // 隐藏旧结果
-    quizArea.classList.remove('hidden'); // 显示测验区域
-    showLoading(true); // 显示加载动画
-    startLessonQuizBtn.disabled = true; // 禁用开始按钮
+            speakButton.addEventListener('click', () => {
+                console.log("Speak button clicked.");
+                if (synth.speaking) {
+                    console.log("Speech synthesis is already in progress.");
+                    return;
+                }
+                const utterThis = new SpeechSynthesisUtterance(textToSpeak.textContent);
+                console.log("Text to speak:", utterThis.text);
 
-    // 设定默认题目数量或测验所有单词
-    const numQuestions = 10; // 或者可以动态获取，或设置为一个很大值来获取所有
-    const quizType = 'cn_to_en'; // 或者可以从页面获取
+                // 注释掉语音选择部分
+                // const selectedVoiceName = voiceSelect.value;
+                // console.log("Selected voice name:", selectedVoiceName);
+                // const selectedVoice = voices.find(voice => voice.name === selectedVoiceName);
+                // if (selectedVoice) {
+                //     utterThis.voice = selectedVoice;
+                //     console.log("Selected voice:", selectedVoice);
+                // } else {
+                //     console.log("Selected voice not found.");
+                // }
 
-    try {
-        const response = await fetch(`/api/quiz?lessons=${lessonNumber}&count=${num_questions}&type=${quizType}`);
-        showLoading(false);
-
-        if (!response.ok) {
-            let errorMsg = `HTTP error! status: ${response.status}`;
-            try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch (e) {}
-            throw new Error(errorMsg);
-        }
-        currentQuizData = await response.json(); // 更新全局测验数据
-
-        if (!currentQuizData || currentQuizData.length === 0) {
-            showError(`未能加载 Lesson ${lessonNumber} 的词汇题。`);
-            quizArea.classList.add('hidden');
-            startLessonQuizBtn.disabled = false; // 重新启用按钮
-            return;
-        }
-
-        displayQuestions(); // 调用 main.js 中的函数显示问题
-        document.getElementById('submit-quiz-btn').classList.remove('hidden'); // 显示提交按钮
-
-    } catch (error) {
-        console.error('Error starting lesson quiz:', error);
-        showError(`开始测试失败: ${error.message}`);
-        quizArea.classList.add('hidden');
-        startLessonQuizBtn.disabled = false; // 出错时重新启用按钮
-    }
-}
-
-function restartLessonQuiz() {
-    // 这个函数会在点击结果区的“重新测试本课”时调用
-    resultsArea.classList.add('hidden');
-    quizArea.classList.add('hidden'); // 隐藏测试区以便重新开始
-    hideError();
-    startLessonQuizBtn.disabled = false; // 重新启用"测试本课词汇"按钮
-    // 可以选择性地调用 startLessonQuiz(lessonNumber) 直接开始新一轮测试
-    // startLessonQuiz(startLessonQuizBtn.dataset.lessonNumber);
-}
-
-// 为“测试本课词汇”按钮绑定事件
-if (startLessonQuizBtn) {
-    startLessonQuizBtn.addEventListener('click', () => {
-        const lessonNum = startLessonQuizBtn.dataset.lessonNumber;
-        if (lessonNum) {
-            startLessonQuiz(lessonNum);
+                synth.speak(utterThis);
+                console.log("Speaking initiated.");
+            });
         } else {
-            showError('无法获取当前课程编号。');
+            console.error('Speech synthesis not supported');
+            const speakButton = document.getElementById('speak-button');
+            const voiceSelect = document.getElementById('voice-select');
+            if (speakButton) {
+                speakButton.disabled = true;
+                speakButton.textContent = '浏览器不支持朗读';
+            }
+            if (voiceSelect) {
+                voiceSelect.disabled = true;
+            }
         }
     });
-}
 
-// 为结果区的“重新测试本课”按钮绑定事件
-if (restartQuizBtn) {
-    restartQuizBtn.addEventListener('click', restartLessonQuiz);
-    // 注意：如果 main.js 也有一个全局的 restartQuiz 监听器，可能会冲突
-    // 最好是在 main.js 中检查当前页面，或者使用不同的 ID
-}
+    // 这个脚本块会在 main.js 加载后执行
 
-// 注意：确保 submitQuiz 函数在提交后调用的是 restartLessonQuiz 或类似逻辑
-// 并且 main.js 中的 displayQuestions 能正确找到本页的 #questions-container
+    // 获取本页特定的元素
+    const startLessonQuizBtn = document.getElementById('start-lesson-quiz-btn');
+    const quizArea = document.getElementById('quiz-area');
+    const resultsArea = document.getElementById('results-area');
+    const restartQuizBtn = document.getElementById('restart-quiz-btn'); // 重命名或复用逻辑
+
+    // 假设 main.js 中定义了:
+    // currentQuizData, userAnswers, displayQuestions, submitQuiz,
+    // showLoading, hideLoading, showError, hideError
+    // 我们需要一个新的启动函数和调整 restart
+
+    async function startLessonQuiz(lessonNumber) {
+        hideError();
+        resultsArea.classList.add('hidden'); // 隐藏旧结果
+        quizArea.classList.remove('hidden'); // 显示测验区域
+        showLoading(true); // 显示加载动画
+        startLessonQuizBtn.disabled = true; // 禁用开始按钮
+
+        // 设定默认题目数量或测验所有单词
+        const numQuestions = 10; // 或者可以动态获取，或设置为一个很大值来获取所有
+        const quizType = 'cn_to_en'; // 或者可以从页面获取
+
+        try {
+            const response = await fetch(`/api/quiz?lessons=${lessonNumber}&count=${numQuestions}&type=${quizType}`);
+            showLoading(false);
+
+            if (!response.ok) {
+                let errorMsg = `HTTP error! status: ${response.status}`;
+                try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch (e) {}
+                throw new Error(errorMsg);
+            }
+            currentQuizData = await response.json(); // 更新全局测验数据
+
+            if (!currentQuizData || currentQuizData.length === 0) {
+                showError(`未能加载 Lesson ${lessonNumber} 的词汇题。`);
+                quizArea.classList.add('hidden');
+                startLessonQuizBtn.disabled = false; // 重新启用按钮
+                return;
+            }
+
+            displayQuestions(); // 调用 main.js 中的函数显示问题
+            document.getElementById('submit-quiz-btn').classList.remove('hidden'); // 显示提交按钮
+
+        } catch (error) {
+            console.error('Error starting lesson quiz:', error);
+            showError(`开始测试失败: ${error.message}`);
+            quizArea.classList.add('hidden');
+            startLessonQuizBtn.disabled = false; // 出错时重新启用按钮
+        }
+    }
+
+    function restartLessonQuiz() {
+        // 这个函数会在点击结果区的“重新测试本课”时调用
+        resultsArea.classList.add('hidden');
+        quizArea.classList.add('hidden'); // 隐藏测试区以便重新开始
+        hideError();
+        startLessonQuizBtn.disabled = false; // 重新启用"测试本课词汇"按钮
+        // 可以选择性地调用 startLessonQuiz(lessonNumber) 直接开始新一轮测试
+        // startLessonQuiz(startLessonQuizBtn.dataset.lessonNumber);
+    }
+
+    // 为“测试本课词汇”按钮绑定事件
+    if (startLessonQuizBtn) {
+        startLessonQuizBtn.addEventListener('click', () => {
+            const lessonNum = startLessonQuizBtn.dataset.lessonNumber;
+            if (lessonNum) {
+                startLessonQuiz(lessonNum);
+            } else {
+                showError('无法获取当前课程编号。');
+            }
+        });
+    }
+
+    // 为结果区的“重新测试本课”按钮绑定事件
+    if (restartQuizBtn) {
+        restartQuizBtn.addEventListener('click', restartLessonQuiz);
+        // 注意：如果 main.js 也有一个全局的 restartQuiz 监听器，可能会冲突
+        // 最好是在 main.js 中检查当前页面，或者使用不同的 ID
+    }
+
+    // 注意：确保 submitQuiz 函数在提交后调用的是 restartLessonQuiz 或类似逻辑
+    // 并且 main.js 中的 displayQuestions 能正确找到本页的 #questions-container
 
 </script>
 {% endblock %}

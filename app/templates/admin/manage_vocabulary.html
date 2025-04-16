@@ -1,60 +1,54 @@
-{% extends "base.html" %}
+{# app/templates/admin/manage_vocabulary.html - Updated to display data #}
+{% extends "base.html" %} {# Or your admin base template #}
 
-{% block title %}管理词汇{% endblock %}
+{% block title %}{{ title }} - NCE 学习平台{% endblock %}
 
-{% block content %}
-<div class="admin-layout">
-    {% include 'admin/sidebar.html' %}
-    <div class="admin-content">
-        <h2>管理词汇</h2>
-        <p>这里将显示词汇列表，你可以进行添加、编辑或删除等操作。</p>
-        </div>
-</div>
-{% endblock %}
+{% block content %} {# Or your admin content block #}
+<div class="container mt-4 mb-5">
+    <h2 class="mb-4">{{ title }}</h2>
+    <p class="lead">此页面用于管理 NCE Book 2 的词汇条目。</p>
+    <hr>
 
-{% block styles_extra %}
-<style>
-    .admin-layout {
-        display: flex;
-        min-height: 500px;
-    }
+    <div class="mb-3">
+        <button class="btn btn-success disabled"> <i class="bi bi-plus-circle"></i> 添加新词汇 (功能待实现)</button>
+    </div>
 
-    .admin-sidebar {
-        width: 200px;
-        background-color: #f8f9fa;
-        padding: 20px;
-        border-right: 1px solid #eee;
-    }
+    <table class="table table-striped table-hover table-bordered table-sm"> {# Added table-sm for compactness #}
+        <thead class="table-light">
+            <tr>
+                <th scope="col">课号 (Lesson)</th>
+                <th scope="col">英文单词 (English)</th>
+                <th scope="col">中文翻译 (Chinese)</th>
+                <th scope="col">词性 (POS)</th>
+                <th scope="col" style="width: 15%;">操作 (Actions)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {# --- Loop through the vocabulary list passed from the route --- #}
+            {% if vocabulary %}
+                {% for item in vocabulary %}
+                <tr>
+                    <td>{{ item.lesson_number }}</td>
+                    <td>{{ item.english_word }}</td>
+                    <td>{{ item.chinese_translation }}</td>
+                    <td>{{ item.part_of_speech }}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-primary disabled me-1" title="编辑 (功能待实现)"><i class="bi bi-pencil-square"></i></button>
+                        <button class="btn btn-sm btn-outline-danger disabled" title="删除 (功能待实现)"><i class="bi bi-trash"></i></button>
+                    </td>
+                </tr>
+                {% endfor %}
+            {% else %}
+                {# --- This row is shown if the vocabulary list is empty --- #}
+                <tr>
+                    <td colspan="5" class="text-center text-muted">数据库中没有找到词汇记录。请先处理 PDF 文件。(No vocabulary items found in the database. Please process the PDF file first.)</td>
+                </tr>
+            {% endif %}
+            {# --- End loop --- #}
+        </tbody>
+    </table>
 
-    .admin-sidebar h3 {
-        margin-top: 0;
-        margin-bottom: 15px;
-    }
+    {# Consider adding pagination here if the list becomes very long #}
 
-    .admin-sidebar ul {
-        list-style: none;
-        padding: 0;
-    }
-
-    .admin-sidebar li {
-        margin-bottom: 10px;
-    }
-
-    .admin-sidebar a {
-        text-decoration: none;
-        color: #333;
-        display: block;
-        padding: 8px 10px;
-        border-radius: 4px;
-    }
-
-    .admin-sidebar a:hover {
-        background-color: #e9ecef;
-    }
-
-    .admin-content {
-        flex-grow: 1;
-        padding: 20px;
-    }
-</style>
+</div> {# End container #}
 {% endblock %}

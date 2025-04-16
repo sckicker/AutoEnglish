@@ -1,104 +1,195 @@
-{% extends "base.html" %}
+{# app/templates/admin/admin.html - Updated with Bootstrap 5 Layout and CSRF for Fetch #}
+{% extends "base.html" %} {# 继承包含 Bootstrap 的基础模板 #}
 
-{% block title %}管理面板{% endblock %}
+{% block title %}管理面板 - NCE 学习平台{% endblock %}
 
 {% block content %}
-<div class="admin-layout">
-    <aside class="admin-sidebar">
-        <h3>管理菜单</h3>
-        <ul>
-            <li><a href="{{ url_for('admin') }}" class="active">首页</a></li> <li><a href="{{ url_for('view_lessons') }}">查看课程</a></li>
-            <li><a href="{{ url_for('manage_vocabulary') }}">管理词汇</a></li>
-            <li><a href="{{ url_for('process_pdf_route') }}">处理 PDF 文件</a></li>
-            <li><a href="{{ url_for('index') }}">返回首页</a></li>
-            <li><a href="{{ url_for('logout') }}">登出</a></li>
-        </ul>
+{# --- Add CSRF Token Meta Tag --- #}
+{# Ideally place this in the <head> via base.html, but placing here ensures availability #}
+{# Requires Flask-WTF CSRFProtect to be enabled and configured #}
+<meta name="csrf-token" content="{{ csrf_token() }}">
+{# -------------------------------- #}
+
+
+{# 使用 Bootstrap Grid 实现侧边栏+内容布局 #}
+<div class="row g-0"> {# g-0 移除列之间的默认间距 #}
+
+    {# --- 左侧边栏 (Sidebar) --- #}
+    <aside class="col-md-3 col-lg-2 border-end bg-light admin-sidebar-custom"> {# 调整列宽，添加边框和背景 #}
+        <div class="d-flex flex-column p-3"> {# 使用 Flex 布局并添加内边距 #}
+            <h4 class="mb-3 border-bottom pb-2">管理菜单</h4> {# 使用 h4 和边框 #}
+            {# 使用 Bootstrap Nav 组件作为垂直导航菜单 #}
+            <ul class="nav nav-pills flex-column mb-auto">
+                <li class="nav-item">
+                    <a href="{{ url_for('admin_dashboard') }}" class="nav-link link-dark {{ 'active' if request.endpoint == 'admin_dashboard' else '' }}">
+                        <i class="bi bi-house-door me-2"></i>管理首页
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('view_lessons') }}" class="nav-link link-dark {{ 'active' if request.endpoint == 'view_lessons' else '' }}">
+                        <i class="bi bi-list-columns-reverse me-2"></i> 查看课程列表
+                    </a>
+                </li>
+                <li>
+                    <a href="{{ url_for('manage_vocabulary') }}" class="nav-link link-dark {{ 'active' if request.endpoint == 'manage_vocabulary' else '' }}">
+                         <i class="bi bi-card-list me-2"></i> 管理词汇
+                    </a>
+                </li>
+                 {# <li><a href="{{ url_for('manage_users') }}" class="nav-link link-dark {{ 'active' if request.endpoint == 'manage_users' else '' }}"><i class="bi bi-people me-2"></i> 管理用户</a></li> #}
+                 {# PDF 处理在内容区 #}
+            </ul>
+            <hr>
+            {# 底部链接 #}
+            <div class="nav flex-column">
+                 <a href="{{ url_for('index') }}" class="nav-link link-secondary small"><i class="bi bi-arrow-bar-left me-2"></i>返回网站首页</a>
+                 <a href="{{ url_for('logout') }}" class="nav-link link-secondary small"><i class="bi bi-box-arrow-right me-2"></i>登出</a>
+            </div>
+        </div>
     </aside>
-    <div class="admin-content">
-        <h2>管理面板</h2>
-        <form action="{{ url_for('process_pdf_route') }}" method="POST">
-            <button type="submit">处理 PDF 文件</button>
-        </form>
-        <div id="processing-status"></div>
+    {# --- 侧边栏结束 --- #}
+
+
+    {# --- 右侧内容区域 (Content Area) --- #}
+    <div class="col-md-9 col-lg-10 admin-content-custom"> {# 占据剩余空间 #}
+        <div class="p-4"> {# 添加内边距 #}
+            <h2 class="mb-4">管理面板首页 (Admin Dashboard)</h2>
+            <p class="text-muted">欢迎回来, {{ current_user.username if current_user.is_authenticated else 'Admin' }}!</p>
+            <hr>
+
+            {# --- PDF 处理功能区 --- #}
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                   <h5 class="mb-0">PDF 数据处理</h5>
+                </div>
+                <div class="card-body">
+                    <p>点击下方按钮来处理 NCE Book 2 PDF 文件，提取或更新课程和词汇数据到数据库中。</p>
+                    {# 这个表单只是用来触发 JS，实际提交由 fetch 完成 #}
+                    <form id="pdf-process-form" action="{{ url_for('process_pdf_route_admin') }}" method="POST" onsubmit="return false;"> {# 添加 onsubmit="return false;" 防止浏览器默认提交 #}
+                        {# {{ form.hidden_tag() }} 如果这是一个 FlaskForm，需要加这行来渲染 CSRF 隐藏字段，但我们是用 JS fetch，所以用 meta tag #}
+                        <button type="submit" class="btn btn-warning">
+                           <i class="bi bi-gear-fill me-2"></i> 开始处理 PDF 文件
+                        </button>
+                    </form>
+                    {# 用于显示处理状态的区域 #}
+                    <div id="processing-status" class="mt-3"></div>
+                </div>
+            </div>
+            {# --- PDF 处理区结束 --- #}
+
+            {# --- 其他管理内容可以放在这里 --- #}
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle me-2"></i>
+                你可以在这里添加其他的管理功能入口或统计信息。
+            </div>
+
+        </div>
     </div>
-</div>
+    {# --- 内容区结束 --- #}
+
+</div> {# --- End Row --- #}
 {% endblock %}
 
+
+{# 不再需要内嵌 CSS，应移至 style.css 或 admin.css #}
 {% block styles_extra %}
-<style>
-    .admin-layout {
-        display: flex;
-        min-height: 500px; /* 调整最小高度 */
-    }
-
-    .admin-sidebar {
-        width: 200px; /* 设置侧边栏宽度 */
-        background-color: #f8f9fa;
-        padding: 20px;
-        border-right: 1px solid #eee;
-    }
-
-    .admin-sidebar h3 {
-        margin-top: 0;
-        margin-bottom: 15px;
-    }
-
-    .admin-sidebar ul {
-        list-style: none;
-        padding: 0;
-    }
-
-    .admin-sidebar li {
-        margin-bottom: 10px;
-    }
-
-    .admin-sidebar a {
-        text-decoration: none;
-        color: #333;
-        display: block;
-        padding: 8px 10px;
-        border-radius: 4px;
-    }
-
-    .admin-sidebar a:hover {
-        background-color: #e9ecef;
-    }
-
-    .admin-sidebar a.active {
-        background-color: #007bff; /* 选中时的背景色 */
-        color: white;
-    }
-
-    .admin-content {
-        flex-grow: 1; /* 内容区域占据剩余空间 */
-        padding: 20px;
-    }
-</style>
+{# <style> ... </style> #}
 {% endblock %}
 
+
+{# 处理 PDF 提交的 JavaScript (包含 CSRF Token) #}
 {% block scripts_extra %}
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const form = document.querySelector('form');
-        const statusDiv = document.getElementById('processing-status');
+document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('pdf-process-form');
+    const statusDiv = document.getElementById('processing-status');
+    const submitButton = form ? form.querySelector('button[type="submit"]') : null;
 
+    if (form && statusDiv && submitButton) {
         form.addEventListener('submit', async (event) => {
-            event.preventDefault();
-            statusDiv.textContent = '正在处理 PDF 文件，请稍候...';
+            event.preventDefault(); // 阻止表单默认提交 (虽然 onsubmit=false 也做了)
+            statusDiv.innerHTML = `
+                <div class="spinner-border spinner-border-sm text-primary me-2" role="status">
+                  <span class="visually-hidden">Loading...</span>
+                </div>
+                正在处理 PDF 文件，这可能需要一些时间，请稍候...
+            `;
+            submitButton.disabled = true;
+
+            let message = '';
+            let isError = false;
+
             try {
-                const response = await fetch(form.action, {
-                    method: form.method
-                });
-                const data = await response.json();
-                if (response.ok) {
-                    statusDiv.textContent = data.message;
+                // --- 读取 CSRF Token ---
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+                // --- 构建请求头 ---
+                const headers = {
+                    // 'Content-Type': 'application/json' // POST 请求通常不需要设置 Content-Type，除非你发送了 body
+                    'Accept': 'application/json' // 明确告诉服务器我们期望接收 JSON
+                };
+                if (csrfToken) {
+                    headers['X-CSRFToken'] = csrfToken; // 添加 CSRF Token 到请求头
+                    console.log("CSRF Token Included:", csrfToken); // 调试日志
                 } else {
-                    statusDiv.textContent = `处理失败: ${data.error || '未知错误'}`;
+                    console.warn('CSRF token meta tag not found. Request might be rejected.');
+                    // 可以在这里提前显示错误并阻止请求
+                    // statusDiv.innerHTML = '<div class="alert alert-danger">错误：无法获取安全令牌。</div>';
+                    // submitButton.disabled = false;
+                    // return;
                 }
-            } catch (error) {
-                statusDiv.textContent = `处理过程中发生错误: ${error.message}`;
+
+                const response = await fetch(form.action, {
+                    method: form.method, // 'POST'
+                    headers: headers // 使用包含 CSRF token 的 headers
+                    // body: null // 这个请求通常没有 body
+                });
+
+                isError = !response.ok;
+
+                try {
+                    const data = await response.json(); // 只读取一次
+
+                    if (isError) {
+                         message = `处理失败 (${response.status}): ${data.error || '服务器返回了错误状态，但内容无法解析为具体错误信息。'}`;
+                    } else {
+                         message = `<strong class="text-success">处理成功!</strong><br>
+                                    消息: ${data.message || ''}<br>
+                                    词汇总结: 添加 ${data.vocabulary_summary?.added_to_db || 0}, 跳过 ${data.vocabulary_summary?.skipped_duplicates || 0}, 错误 ${data.vocabulary_summary?.processing_errors || 0}<br>
+                                    课文总结: 添加 ${data.lesson_text_summary?.added_to_db || 0}, 更新 ${data.lesson_text_summary?.updated_in_db || 0}, 错误 ${data.lesson_text_summary?.processing_errors || 0}`;
+                    }
+                } catch (jsonError) {
+                    console.error("JSON Parsing Error:", jsonError);
+                    if (isError) {
+                        message = `处理失败 (${response.status}): 服务器返回了错误状态，且响应内容不是预期的JSON格式。请检查服务器日志获取详情。`;
+                    } else {
+                        message = `处理异常 (${response.status}): 服务器声称成功，但返回了无法解析的非JSON内容。请检查服务器实现。`;
+                    }
+                    isError = true;
+                }
+
+                statusDiv.innerHTML = `
+                    <div class="alert ${isError ? 'alert-danger' : 'alert-success'} alert-dismissible fade show mt-3" role="alert">
+                        ${message}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                `;
+
+            } catch (networkError) {
+                console.error("PDF Processing Fetch Network Error:", networkError);
+                 isError = true;
+                 message = `处理过程中发生网络错误: ${networkError.message}`;
+                 statusDiv.innerHTML = `
+                     <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
+                        ${message}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                `;
+            } finally {
+                 submitButton.disabled = false;
             }
         });
-    });
+    } else {
+        console.warn("PDF Process form, status div, or submit button not found.");
+    }
+});
 </script>
 {% endblock %}

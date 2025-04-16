@@ -1,0 +1,36 @@
+{# app/templates/lessons_list.html #}
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - 新概念英语学习平台{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <h1 class="mb-4">{{ title }}</h1>
+
+    {% if lessons %}
+        <div class="list-group">
+            {% for lesson in lessons %}
+                <a href="{{ url_for('view_lesson', lesson_number=lesson.lesson_number) }}" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                    <span>
+                        Lesson {{ lesson.lesson_number }}
+                        {# 如果你的 Lesson 模型有 title 字段，可以取消注释下面这行 #}
+                        {# {% if lesson.title %}- {{ lesson.title }}{% endif %} #}
+                    </span>
+                    <span class="badge bg-primary rounded-pill"><i class="bi bi-chevron-right"></i></span>
+                </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-warning" role="alert">
+            目前没有可用的课程。请检查数据是否已导入。
+            (No lessons available at the moment. Please check if data has been imported.)
+            {# 如果需要，可以添加管理员操作的链接 #}
+            {# {% if current_user.is_authenticated and current_user.is_admin %}
+               <hr>
+               <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary btn-sm">前往管理后台 (Go to Admin)</a>
+            {% endif %} #}
+        </div>
+    {% endif %}
+
+</div> {# End container #}
+{% endblock %}

@@ -2,11 +2,11 @@
 
 /* --- CSS 变量 (定义调色板和基础设置) --- */
 :root {
-    --primary-color: #3f51b5; /* 主题蓝 (来自你之前的 CSS) */
+    --primary-color: #3f51b5; /* 主题蓝 */
     --primary-dark: #303f9f;  /* 深一点的主题蓝 */
     --primary-light: #e8eaf6; /* 很浅的主题蓝 */
     --secondary-color: #6c757d; /* Bootstrap 灰色 */
-    --success-color: #198754;  /* Bootstrap 绿色 (替换之前的 #4CAF50?) */
+    --success-color: #198754;  /* Bootstrap 绿色 */
     --warning-color: #ffc107;  /* Bootstrap 黄色 */
     --light-bg: #f8f9fa;      /* Bootstrap 浅灰 */
     --body-bg: #f0f4f8;       /* 页面背景色 */
@@ -27,32 +27,28 @@
 /* --- 基础样式 --- */
 body {
     font-family: var(--font-sans-serif); /* 应用系统字体栈 */
-    line-height: 1.65; /* 稍增加行高 */
+    line-height: 1.65;
     background-color: var(--body-bg);
+    background-image: linear-gradient(180deg, #f8f9fa 0%, #eef2f7 100%);
     color: var(--text-color);
     min-height: 100vh;
-    -webkit-font-smoothing: antialiased; /* 字体抗锯齿 (macOS/iOS) */
-    -moz-osx-font-smoothing: grayscale;  /* (Firefox on macOS) */
-    margin: 0;
-    padding: 0;
-    background-color: #f0f8ff; /* 这里设置你想要的背景颜色，例如淡蓝色 */
-    color: #333;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 /* --- 英雄区域样式 --- */
 .hero-section {
     padding: 4rem 1.5rem;
     margin-bottom: 3rem;
-    /* 使用更柔和的主题色渐变背景 */
     background: linear-gradient(135deg, var(--primary-color) 0%, #5c6bc0 100%);
     color: white;
-    border-radius: var(--border-radius-xl); /* 更大的圆角 */
+    border-radius: var(--border-radius-xl);
     text-align: center;
-    box-shadow: 0 8px 25px rgba(63, 81, 181, 0.2); /* 添加一些阴影 */
+    box-shadow: 0 8px 25px rgba(63, 81, 181, 0.2);
 }
 .hero-section h2 {
-    font-size: 2.8rem; /* 调整标题大小 */
-    font-weight: 700; /* 加粗 */
+    font-size: 2.8rem;
+    font-weight: 700;
     color: white;
     letter-spacing: 0.5px;
     text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
@@ -62,49 +58,35 @@ body {
 }
 .hero-section p.lead {
     font-size: 1.15rem;
-    color: rgba(255, 255, 255, 0.9); /* 提高一点透明度 */
+    color: rgba(255, 255, 255, 0.9);
     margin-bottom: 0;
-    font-weight: 300; /* 更细的字体 */
+    font-weight: 300;
 }
 
 /* --- Container (由 Bootstrap 控制) --- */
 
 /* --- Header & Footer --- */
 header.bg-primary {
-    background-color: var(--primary-color) !important; /* 确保使用变量 */
-    border-bottom: none; /* 移除之前的粗边框，让 Hero Section 突出 */
+    background-color: var(--primary-color) !important;
+    border-bottom: none;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    padding: 1rem 0; /* 调整内边距 */
+    padding: 1rem 0;
 }
-header h1.h3 { /* 匹配 base.html 中的类 */
-    font-size: 1.5rem; /* 调整 Header 标题大小 */
+header h1.h3 {
+    font-size: 1.5rem;
     font-weight: 500;
 }
-header h1 a { /* 确保颜色和下划线 */
+header h1 a {
      color: white !important;
      text-decoration: none;
 }
 header h1 a:hover {
      text-decoration: none;
-     opacity: 0.9; /* 悬停时稍微变淡 */
-}
-
-.page-title-section h2 {
-    background-image: linear-gradient(to right, #800080, #ff8c00, #808000, #008000, #000080, #4b0082, #8b00ff); /* 更深的彩虹渐变 */
-    -webkit-background-clip: text;
-    color: transparent;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); /* 稍微加深阴影 */
-}
-
-.page-title-section p.lead {
-    background-image: linear-gradient(to right, #008080, #00008b); /* 更深的蓝绿渐变 */
-    -webkit-background-clip: text;
-    color: transparent;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2); /* 稍微加深阴影 */
+     opacity: 0.9;
 }
 
 footer.footer {
-    font-size: 0.85rem; /* 页脚文字稍小 */
+    font-size: 0.85rem;
     color: var(--text-muted);
     margin-top: 4rem;
     padding-top: 1.5rem;
@@ -113,29 +95,21 @@ footer.footer {
 
 /* --- Headings --- */
 h3 { /* 区域标题 */
-    font-weight: 600; /* 加粗 */
-    color: var(--primary-dark); /* 使用深一点的主色 */
+    font-weight: 600;
+    color: var(--primary-dark);
     letter-spacing: 0.3px;
     border-bottom: 1px solid var(--border-color);
     padding-bottom: 0.6rem;
     margin-bottom: 1.5rem;
 }
 
-.mb-4 h3 {
-    margin-bottom: 1rem;
-    padding: 0.5rem 1rem;
-    background-color: #007bff; /* 主题蓝色 */
-    color: white;
-    border-radius: 5px;
-    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.15);
-    display: inline-block;
-}
 
 /* --- Lesson Selection Cards --- */
 .card {
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius-lg);
-    background-image: linear-gradient(to bottom right, #a7ffeb, #8c9eff); /* 从浅绿色到浅紫色 */
+    background-color: var(--card-bg); /* 改回白色背景，渐变效果不佳 */
+    /* background: linear-gradient(135deg, #ffffff 0%, #f7f9fc 100%); */
     box-shadow: 0 4px 10px var(--card-shadow);
     transition: transform 0.25s ease, box-shadow 0.25s ease;
     overflow: hidden;
@@ -145,66 +119,23 @@ h3 { /* 区域标题 */
     transform: translateY(-4px);
     box-shadow: 0 10px 20px var(--card-hover-shadow);
 }
-.card-body {
-    padding: 1.25rem;
-    display: flex;
-    flex-direction: column;
-}
-.card-title {
-    color: var(--primary-dark);
-    font-weight: 600;
-    margin-bottom: 0.75rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid #f0f0f0; /* 更浅的分隔线 */
-}
-.card .mt-auto { /* 卡片底部操作区 */
-     border-top: none;
-     padding-top: 1rem;
-     margin-top: auto;
-}
-.card .btn-outline-primary {
-    border-color: var(--primary-color);
-    color: var(--primary-color);
-    font-weight: 500;
-    transition: all 0.2s ease;
-    width: 100%;
-    border-radius: var(--border-radius-base); /* 按钮圆角 */
-    font-size: 0.9rem;
-}
-.card .btn-outline-primary:hover {
-    background-color: var(--primary-color);
-    color: white;
-    box-shadow: 0 2px 5px rgba(63, 81, 181, 0.3);
-}
+.card-body { padding: 1.25rem; display: flex; flex-direction: column; }
+.card-title { color: var(--primary-dark); font-weight: 600; margin-bottom: 0.75rem; padding-bottom: 0.5rem; border-bottom: 1px solid #f0f0f0; }
+.card .mt-auto { border-top: none; padding-top: 1rem; margin-top: auto; }
+.card .btn-outline-primary { border-color: var(--primary-color); color: var(--primary-color); font-weight: 500; transition: all 0.2s ease; width: 100%; border-radius: var(--border-radius-base); font-size: 0.9rem; }
+.card .btn-outline-primary:hover { background-color: var(--primary-color); color: white; box-shadow: 0 2px 5px rgba(63, 81, 181, 0.3); }
 .card .btn i { margin-right: 0.4rem; vertical-align: -1px; }
 .card .form-check { margin-top: 0.75rem; }
 .card .form-check-label { font-size: 0.9em; color: var(--text-muted); }
 
-.quiz-options-container h3 {
-    margin-bottom: 1rem;
-    background-image: linear-gradient(to right, #800080, #ff8c00, #808000, #008000, #000080, #4b0082, #8b00ff);
-    -webkit-background-clip: text;
-    color: transparent;
-    display: inline-block;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
-}
-
-.quiz-options-container {
-    margin-top: 4rem;
-    padding: 1.5rem;
-    border: 2px solid #007bff;
-    border-radius: 8px;
-    background-image: linear-gradient(to bottom right, #e0f7fa, #c5cae9); /* 一个柔和的渐变 */
-    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1);
-}
 
 /* --- Quiz Options Area --- */
-#quiz-options-section {
-    background-color: var(--card-bg); /* 使用卡片背景色 */
+#quiz-options-section { /* Target the ID added in HTML */
+    background-color: var(--card-bg);
     border: 1px solid var(--border-color);
     box-shadow: 0 3px 8px var(--card-shadow);
-    border-radius: var(--border-radius-lg); /* 与卡片一致的圆角 */
-    margin-top: 3rem; /* 增加与上方卡片的间距 */
+    border-radius: var(--border-radius-lg);
+    margin-top: 3rem;
     padding: 1.5rem 2rem;
 }
 #quiz-options-section h3 {
@@ -213,190 +144,47 @@ h3 { /* 区域标题 */
     margin-bottom: 1.5rem;
     text-align: center;
 }
-/* 调整选项行内间距 */
-#quiz-options-section .row > div {
-    padding-left: 5px;
-    padding-right: 5px;
-}
-#quiz-options-section label {
-     margin-bottom: 0; /* 移除 label 的下边距，与控件对齐 */
-}
+#quiz-options-section .row > div { padding-left: 5px; padding-right: 5px; }
+#quiz-options-section label { margin-bottom: 0; }
 
-.container-fluid h1.display-5.fw-bold {
-    font-size: 2.8rem; /* 更大的字号 */
-    color: #007bff; /* 使用你的主题蓝色或其他醒目的颜色 */
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2); /* 添加一个柔和的阴影，使其更立体 */
-    margin-bottom: 1rem; /* 确保下方有足够的留白 */
-}
-
-.lesson-text.english-text {
-    font-family: "Segoe UI", Roboto, sans-serif;
-    line-height: 1.7;
-    font-size: 1.2rem;
-    color: navy;
-    white-space: pre-wrap;
-}
-
-/* 针对整个包含英文和中文的 row */
-.row.g-4 > div {
-    margin-bottom: 15px; /* 增加一些底部外边距 */
-}
-
-/* 英文课文区域样式 */
-.col-md-6:first-child .p-3.border.rounded-2.bg-white.h-100 {
-    background-color: #f9f9f9; /* 浅灰色背景 */
-    border-color: #ddd; /* 更柔和的边框 */
-    padding: 25px; /* 增加内边距 */
-}
-
-.col-md-6:first-child h4.mb-3.pb-2.border-bottom {
-    color: #007bff; /* 使用你的主题蓝色 */
-    border-bottom: 1px solid #eee; /* 更细的底部边框 */
-    margin-bottom: 20px;
-    padding-bottom: 15px;
-    font-size: 1.1rem; /* 稍微调整字号 */
-}
-
-.col-md-6:first-child .lesson-text {
-    font-family: Arial, sans-serif; /* 选择易读的字体 */
-    line-height: 1.7; /* 增加行高 */
-    font-size: 1.05rem; /* 稍微增大字号 */
-    color: #333;
-}
-
-/* 中文译文区域样式 */
-.col-md-6:last-child .p-3.border.rounded-2.bg-white.h-100,
-.col-md-6:last-child .p-3.border.rounded-2.bg-light.h-100 {
-    background-color: #f0fff0; /* 淡绿色背景 */
-    border-color: #ddd; /* 更柔和的边框 */
-    padding: 25px; /* 增加内边距 */
-}
-
-.col-md-6:last-child h4.mb-3.pb-2.border-bottom {
-    color: #28a745; /* 可以使用绿色系颜色 */
-    border-bottom: 1px solid #eee; /* 更细的底部边框 */
-    margin-bottom: 20px;
-    padding-bottom: 15px;
-    font-size: 1.1rem; /* 稍微调整字号 */
-}
-
-.col-md-6:last-child .lesson-text {
-    font-family: "微软雅黑", sans-serif; /* 常用的中文易读字体 */
-    line-height: 1.9; /* 增加行高 */
-    font-size: 1.05rem; /* 稍微增大字号 */
-    color: #333;
-}
-
-/* 针对 "Chinese translation not available." 的样式 */
-.col-md-6:last-child .p-3.border.rounded-2.bg-light.h-100.d-flex {
-    border-color: #ddd;
-}
-
-/* 通用的标题图标样式 */
-.col-md-6 h4 i.bi {
-    margin-right: 5px;
-}
 
 /* --- Buttons & Forms (Overrides) --- */
-.btn {
-    border-radius: var(--border-radius-base); /* 标准圆角 */
-    padding: 0.5rem 1.25rem; /* 调整默认按钮大小 */
-    font-weight: 500;
-    transition: all 0.2s ease;
-    letter-spacing: 0.3px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05); /* 给所有按钮加轻微阴影 */
-}
-.btn:hover {
-    transform: translateY(-1px); /* 轻微上移 */
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* 悬停阴影加深 */
-}
-.btn-lg {
-    padding: 0.75rem 1.75rem;
-    font-size: 1.1rem;
-}
-/* 使用 CSS 变量覆盖颜色 */
+.btn { border-radius: var(--border-radius-base); padding: 0.5rem 1.25rem; font-weight: 500; transition: all 0.2s ease; letter-spacing: 0.3px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+.btn:hover { transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+.btn-lg { padding: 0.75rem 1.75rem; font-size: 1.1rem; }
 .btn-primary { background-color: var(--primary-color); border-color: var(--primary-color); }
 .btn-primary:hover { background-color: var(--primary-dark); border-color: var(--primary-dark); }
 .btn-success { background-color: var(--success-color); border-color: var(--success-color); }
-.btn-success:hover { background-color: #157347; border-color: #146c43; } /* Bootstrap 的深绿色 */
+.btn-success:hover { background-color: #157347; border-color: #146c43; }
 .btn-secondary { background-color: var(--secondary-color); border-color: var(--secondary-color); }
 .btn-secondary:hover { background-color: #5a6268; border-color: #545b62; }
 .btn-warning { background-color: var(--warning-color); border-color: var(--warning-color); color: #212529;}
 .btn-warning:hover { background-color: #e0a800; border-color: #d39e00; color: #212529;}
 
-/* 特别是 Start Quiz 按钮 */
-#start-quiz-btn {
-    /* 样式已通过 btn-primary btn-lg 设置，可以保留 */
-}
-#start-quiz-btn:disabled {
-    background-color: #ced4da;
-    border-color: #ced4da;
-    cursor: not-allowed;
-    opacity: 0.65;
-    box-shadow: none; /* 禁用时无阴影 */
-    transform: none; /* 禁用时无效果 */
-}
+#start-quiz-btn { /* Button specific styles if needed, e.g., size */ }
+#start-quiz-btn:disabled { background-color: #ced4da; border-color: #ced4da; cursor: not-allowed; opacity: 0.65; box-shadow: none; transform: none; }
 #start-quiz-help { font-size: 0.85em; }
 
-/* 美化 Select 和 Input (基础) */
-.form-control, .form-select {
-    border-radius: var(--border-radius-base);
-    border-color: var(--border-color);
-    transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out;
-}
-.form-control:focus, .form-select:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 0.25rem rgba(63, 81, 181, 0.25); /* 使用主色调的光晕 */
-}
-.form-control-sm, .form-select-sm { /* 调整小号控件尺寸 */
-    padding: 0.35rem 0.75rem;
-    font-size: 0.875rem;
-}
+.form-control, .form-select { border-radius: var(--border-radius-base); border-color: var(--border-color); transition: border-color .15s ease-in-out,box-shadow .15s ease-in-out; }
+.form-control:focus, .form-select:focus { border-color: var(--primary-color); box-shadow: 0 0 0 0.25rem rgba(63, 81, 181, 0.25); }
+.form-control-sm, .form-select-sm { padding: 0.35rem 0.75rem; font-size: 0.875rem; }
 
 /* --- Quiz & Results Area --- */
-#quiz-area {
-    background-color: transparent; /* 使用页面背景 */
-    padding: 0;
-    border-radius: 0;
-    box-shadow: none;
-    margin-top: 2.5rem; /* 调整与上方距离 */
-}
-#quiz-area h2 { /* "测试进行中..." */
-    font-family: var(--font-heading);
-    color: var(--primary-dark);
-    text-align: left; /* 不再居中 */
-    margin-bottom: 1.5rem;
-    font-weight: 700;
-    border-bottom: 2px solid var(--primary-color);
-    padding-bottom: 0.5rem;
-}
-
-.question.card { /* 题目卡片 */
-    margin-bottom: 1rem;
-    background-color: var(--card-bg); /* 确保有背景 */
-    box-shadow: 0 2px 5px rgba(0,0,0,0.07); /* 轻微阴影 */
-    border: 1px solid var(--border-color);
-}
+#quiz-area { background-color: transparent; padding: 0; border-radius: 0; box-shadow: none; margin-top: 2.5rem; }
+#quiz-area h2 { font-weight: 700; color: var(--primary-dark); text-align: left; margin-bottom: 1.5rem; border-bottom: 2px solid var(--primary-color); padding-bottom: 0.5rem; }
+.question.card { margin-bottom: 1rem; background-color: var(--card-bg); box-shadow: 0 2px 5px rgba(0,0,0,0.07); border: 1px solid var(--border-color); }
 .question-prompt { font-size: 1rem; color: var(--text-color); font-weight: 500; }
 .question-pos { font-style: normal; color: var(--text-muted); margin-left: 8px; font-size: 0.85em; font-weight: 400; background-color: #e9ecef; padding: 1px 4px; border-radius: 3px; }
 .question input.form-control { margin-top: 0.75rem; }
 input.form-control.is-valid { border-color: var(--success-color); background-color: #f0fff0; }
 input.form-control.is-invalid { border-color: #dc3545; background-color: #fff0f0; }
 
-#results-area { /* 结果区域样式 */
-     background-color: var(--card-bg); /* 白色背景 */
-     border: 1px solid var(--border-color);
-     box-shadow: 0 3px 8px var(--card-shadow);
-     border-radius: var(--border-radius-lg);
-     margin-top: 2.5rem;
-     padding: 1.5rem;
-}
-#results-area h2 { font-family: var(--font-heading); color: var(--success-color); margin-bottom: 1rem; }
+#results-area { background-color: var(--card-bg); border: 1px solid var(--border-color); box-shadow: 0 3px 8px var(--card-shadow); border-radius: var(--border-radius-lg); margin-top: 2.5rem; padding: 1.5rem; }
+#results-area h2 { color: var(--success-color); margin-bottom: 1rem; font-weight: 700; border-bottom: none; }
 #results-area h3 { font-size: 1.1rem; font-weight: 600; color: #555; margin-top: 1.5rem; margin-bottom: 0.75rem; padding-bottom: 0.3rem; border-bottom: 1px solid #eee; }
-#results-area li.list-group-item { border-color: rgba(0, 0, 0, 0.06); padding: 0.75rem 0; } /* 调整列表项 */
+#results-area li.list-group-item { border-color: rgba(0, 0, 0, 0.06); padding: 0.75rem 0; }
 .correct { color: var(--success-color); font-weight: bold; }
 .incorrect { color: #dc3545; font-weight: bold; }
-
 
 /* --- Utilities --- */
 .hidden { display: none !important; }
@@ -404,13 +192,12 @@ input.form-control.is-invalid { border-color: #dc3545; background-color: #fff0f0
 #error-message.alert { /* Bootstrap handles styling */ }
 .preserve-newlines { white-space: pre-line; line-height: 1.7; }
 
-
 /* --- Admin Area --- */
 .admin-login-area { margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color); }
 .admin-login-area details summary { cursor: pointer; color: var(--secondary-color); font-weight: 500; margin-bottom: 0.5rem; display: inline-block; transition: color 0.2s ease;}
 .admin-login-area details summary:hover { color: var(--primary-color); }
 .admin-login-area details[open] summary { margin-bottom: 1rem; }
-.admin-login-area .card, .admin-login-area > div > div { /* Target the inner div */ background-color: #f8f9fa; border-radius: var(--border-radius-base); }
+.admin-login-area .card, .admin-login-area > div > div { background-color: #f8f9fa; border-radius: var(--border-radius-base); padding: 1rem; }
 .admin-login-area h4.h6 { font-weight: 600; margin-bottom: 0.75rem; }
 .admin-login-area .form-control-sm { font-size: 0.875rem; }
 .admin-login-area .btn-sm { font-size: 0.875rem; padding: 0.25rem 0.5rem; }

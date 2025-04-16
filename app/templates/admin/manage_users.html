@@ -1,0 +1,64 @@
+{# app/templates/admin/manage_users.html #}
+{% extends "base.html" %}
+
+{% block title %}用户管理{% endblock %}
+
+{% block content %}
+<h2>用户管理 (User Management)</h2>
+<p class="text-muted">只有根管理员 ({{ root_admin_username }}) 可以授予或撤销其他用户的管理员权限。</p>
+
+{% if users %}
+<div class="table-responsive shadow-sm rounded">
+    <table class="table table-striped table-hover align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>ID</th>
+                <th>用户名 (Username)</th>
+                <th>邮箱 (Email)</th>
+                <th>管理员? (Is Admin?)</th>
+                <th>操作 (Actions)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+            <tr>
+                <td>{{ user.id }}</td>
+                <td>{{ user.username }}</td>
+                <td>{{ user.email }}</td>
+                <td>
+                    {% if user.is_admin %}
+                        <span class="badge bg-success">是 (Yes)</span>
+                    {% else %}
+                        <span class="badge bg-secondary">否 (No)</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {# --- Grant/Revoke Admin Form --- #}
+                    {# 根管理员不能被修改，所以这里不需要检查 user.is_root #}
+                    <form action="{{ url_for('toggle_admin_status', user_id=user.id) }}" method="POST" style="display: inline;">
+                        {{ csrf_token() }} {# 如果全局开启了 CSRF，表单需要包含 token #}
+                        {% if user.is_admin %}
+                            <button type="submit" class="btn btn-sm btn-warning" onclick="return confirm('确定要撤销该用户的管理员权限吗？');">
+                                <i class="bi bi-person-dash-fill"></i> 撤销管理员
+                            </button>
+                        {% else %}
+                             <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('确定要授予该用户管理员权限吗？');">
+                                <i class="bi bi-person-check-fill"></i> 授予管理员
+                            </button>
+                        {% endif %}
+                    </form>
+                    {# --- End Form --- #}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+    <p>没有其他用户可供管理。</p>
+{% endif %}
+
+<div class="mt-4">
+    <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">返回管理首页</a>
+</div>
+{% endblock %}
