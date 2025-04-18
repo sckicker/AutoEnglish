@@ -1,98 +1,127 @@
 # app/models.py
-from . import db
-from werkzeug.security import generate_password_hash, check_password_hash
-from flask_login import UserMixin
-from flask import current_app # 导入 current_app
 from datetime import datetime
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import UserMixin # 假设你的 User 模型需要登录功能
+from . import db # 导入你的 db 实例
 
+# 假设你的 User 模型也需要 Flask-Login
 class User(UserMixin, db.Model):
+    __tablename__ = 'user' # 明确表名（好习惯）
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), index=True, unique=True, nullable=False)
     email = db.Column(db.String(120), index=True, unique=True, nullable=False)
-    password_hash = db.Column(db.String(256), nullable=False)
-    # --- 新增：管理员标记 ---
-    is_admin = db.Column(db.Boolean, default=False, nullable=False, index=True) # 添加索引
+    password_hash = db.Column(db.String(256)) # 注意长度可能需要调整
+    is_admin = db.Column(db.Boolean, default=False, nullable=False)
+    # 可能还有 last_seen, about_me 等字段...
 
-    quiz_attempts = db.relationship('QuizAttempt', backref='user', lazy='dynamic')
-    wrong_answers = db.relationship('WrongAnswer', backref='user', lazy='dynamic')
+    # --- 关系定义：指向 WrongAnswer ---
+    # 使用 back_populates 明确指定 WrongAnswer 中的 'user' 属性来完成双向链接
+    # lazy='dynamic' 使得 user.wrong_answers 返回一个可查询对象，而不是直接加载所有记录
+    wrong_answers = db.relationship(
+        'WrongAnswer',
+        back_populates='user', # 指向 WrongAnswer.user
+        lazy='dynamic',        # 返回 Query 对象，适合一对多
+        cascade='all, delete-orphan' # 当删除 User 时，同时删除其关联的 WrongAnswer 记录
+    )
+
+    # --- 关系定义：指向 QuizAttempt --- (示例，如果需要的话)
+    quiz_attempts = db.relationship(
+        'QuizAttempt',
+        back_populates='user',
+        lazy='dynamic',
+        cascade='all, delete-orphan'
+    )
+    # --- 结束关系定义 ---
 
     def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
+        # 确保使用足够强的哈希方法
+        self.password_hash = generate_password_hash(password, method='pbkdf2:sha256')
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
-    # --- 新增：判断是否为根管理员的属性 ---
-    @property
-    def is_root(self):
-        # 直接比较用户名和配置中的根用户名
-        # 提供一个默认值以防配置丢失
-        root_user = current_app.config.get('ROOT_ADMIN_USERNAME', 'root')
-        return self.username == root_user
-
-    # --- 新增：判断是否拥有管理员权限（根或普通）的属性 ---
+    # 如果有 is_admin 字段，可以添加一个 property 供模板或逻辑使用
     @property
     def has_admin_privileges(self):
-        return self.is_root or self.is_admin
+        # 你可以在这里加入更复杂的逻辑，比如检查角色表
+        return self.is_admin
 
     def __repr__(self):
-        return f'<User {self.username}>'
+        return f'<User {self.username} (Admin: {self.is_admin})>'
 
-class QuizAttempt(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
-    lessons_attempted = db.Column(db.String(200)) # 存储课程号，例如 "1,5,10"
-    score = db.Column(db.Integer, nullable=False)
-    total_questions = db.Column(db.Integer, nullable=False)
-    quiz_type = db.Column(db.String(20)) # e.g., 'cn_to_en'
-    # Optional: relationship to specific wrong answers in this attempt
-    # wrong_answers_in_attempt = db.relationship('WrongAnswer', backref='quiz_attempt', lazy='dynamic')
-
-    def __repr__(self):
-         return f'<QuizAttempt {self.id} by User {self.user_id} on {self.timestamp}>'
 
 class WrongAnswer(db.Model):
+    __tablename__ = 'wrong_answer' # 明确表名
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
-    vocabulary_id = db.Column(db.Integer, db.ForeignKey('vocabulary.id'), nullable=False, index=True)
-    timestamp_last_wrong = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True) # 外键指向 user 表的 id
+    vocabulary_id = db.Column(db.Integer, db.ForeignKey('vocabulary.id'), nullable=False, index=True) # 外键指向 vocabulary 表的 id
+    timestamp_first_wrong = db.Column(db.DateTime, index=True, default=datetime.utcnow)
+    timestamp_last_wrong = db.Column(db.DateTime, index=True, default=datetime.utcnow)
     incorrect_count = db.Column(db.Integer, default=1)
-    # quiz_attempt_id = db.Column(db.Integer, db.ForeignKey('quiz_attempt.id'), nullable=True) # Optional link
 
-    # Add unique constraint for user+vocab ? Or allow multiple entries over time?
-    # Let's assume we update timestamp_last_wrong and increment count if pair exists.
-    # __table_args__ = (db.UniqueConstraint('user_id', 'vocabulary_id', name='_user_vocab_uc'),)
+    # --- 新增字段 ---
+    is_marked = db.Column(db.Boolean, default=False, nullable=False, index=True)
+    category = db.Column(db.String(50), nullable=True, index=True)
+    # --- 结束新增字段 ---
 
-    # Relationships to easily access related objects
-    vocabulary_item = db.relationship('Vocabulary') # No backref needed if Vocab doesn't need direct access to wrong answers
+    # --- 关系定义：指向 User ---
+    # 使用 back_populates 明确指定 User 中的 'wrong_answers' 属性来完成双向链接
+    user = db.relationship(
+        'User',
+        back_populates='wrong_answers' # 指向 User.wrong_answers
+    )
+
+    # --- 关系定义：指向 Vocabulary ---
+    # 假设 Vocabulary 模型中有一个名为 'wrong_answer_associations' (或类似) 的 back_populates
+    # 如果 Vocabulary 模型没有反向关系，可以只写 'Vocabulary'
+    vocabulary_item = db.relationship(
+        'Vocabulary',
+        back_populates='wrong_answer_associations' # <--- 你需要在 Vocabulary 模型中定义这个
+    )
+    # --- 结束关系定义 ---
 
     def __repr__(self):
-        return f'<WrongAnswer User {self.user_id} Vocab {self.vocabulary_id}>'
+        return f'<WrongAnswer User {self.user_id} Vocab {self.vocabulary_id} Marked: {self.is_marked} Cat: {self.category}>'
 
+# --- 你还需要确保 Vocabulary 模型中定义了对应的 back_populates ---
 class Vocabulary(db.Model):
+    __tablename__ = 'vocabulary' # 明确表名
     id = db.Column(db.Integer, primary_key=True)
     lesson_number = db.Column(db.Integer, nullable=False, index=True)
-    english_word = db.Column(db.String(200), nullable=False)
-    chinese_translation = db.Column(db.String(300), nullable=False)
-    # 词性字段保持可为空 (nullable=True)，因为解析器可能无法提取词性
-    part_of_speech = db.Column(db.String(20), nullable=True, index=True) # 添加 index=True 推荐
-    source_book = db.Column(db.Integer, nullable=False, default=2, index=True)
+    english_word = db.Column(db.String(128), nullable=False, index=True)
+    part_of_speech = db.Column(db.String(32))
+    chinese_translation = db.Column(db.String(256))
+    # ... 其他字段 ...
 
-    # --- 修改唯一约束，加入 part_of_speech ---
-    __table_args__ = (
-        db.UniqueConstraint(
-            'lesson_number',
-            'english_word',
-            'part_of_speech', # <-- 添加词性字段
-            'source_book',
-            name='_lesson_word_pos_book_uc' # 约束名称更新
-        ),
+    # --- 关系定义：指向 WrongAnswer ---
+    wrong_answer_associations = db.relationship(
+        'WrongAnswer',
+        back_populates='vocabulary_item', # 指向 WrongAnswer.vocabulary_item
+        lazy='dynamic',
+        cascade='all, delete-orphan' # 如果删除词汇，关联的错题记录也删除
     )
-    # --- 约束修改结束 ---
 
     def __repr__(self):
-        return f'<Vocab L{self.lesson_number}: {self.english_word} ({self.part_of_speech})>'
+        return f'<Vocabulary {self.lesson_number} - {self.english_word}>'
+
+# --- 同样，QuizAttempt 模型也需要 back_populates ---
+class QuizAttempt(db.Model):
+    __tablename__ = 'quiz_attempt'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    lessons_attempted = db.Column(db.String(256)) # 逗号分隔的 lesson numbers
+    score = db.Column(db.Integer, nullable=False)
+    total_questions = db.Column(db.Integer, nullable=False)
+    quiz_type = db.Column(db.String(20)) # e.g., 'cn_to_en', 'en_to_cn'
+    timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
+
+    user = db.relationship(
+        'User',
+        back_populates='quiz_attempts' # 指向 User.quiz_attempts
+    )
+
+    def __repr__(self):
+        return f'<QuizAttempt User {self.user_id} Score {self.score}/{self.total_questions} on {self.timestamp}>'
 
 class Lesson(db.Model):
     id = db.Column(db.Integer, primary_key=True)

@@ -171,33 +171,177 @@
 {% endblock %}
 
 {% block scripts_extra %}
-{# JS for enabling/disabling start button #}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
+    // --- 获取元素 ---
     const startQuizBtn = document.getElementById('start-quiz-btn');
-    // Ensure the selector targets checkboxes within the correct form/container
     const lessonCheckboxes = document.querySelectorAll('#lesson-selector input[name="lesson"]');
     const startQuizHelp = document.getElementById('start-quiz-help');
+    const numQuestionsInput = document.getElementById('num-questions');
+    const quizTypeSelect = document.getElementById('quiz-type');
 
+    // --- 函数：检查是否有课程被选中，并更新按钮状态 ---
     function checkSelection() {
         if (!startQuizBtn) return;
         let oneChecked = false;
         lessonCheckboxes.forEach(checkbox => {
             if (checkbox.checked) oneChecked = true;
         });
-        startQuizBtn.disabled = !oneChecked;
-        if (startQuizHelp) startQuizHelp.style.display = oneChecked ? 'none' : 'inline';
+        startQuizBtn.disabled = !oneChecked; // 启用/禁用按钮
+        if (startQuizHelp) startQuizHelp.style.display = oneChecked ? 'none' : 'inline'; // 显示/隐藏提示
     }
 
+    // --- 为复选框添加事件监听 ---
     if (lessonCheckboxes.length > 0) {
         lessonCheckboxes.forEach(checkbox => {
             checkbox.addEventListener('change', checkSelection);
         });
-        checkSelection();
     } else if(startQuizBtn) {
+        // 如果没有课程可选，确保按钮是禁用的
         startQuizBtn.disabled = true;
          if (startQuizHelp) startQuizHelp.style.display = 'inline';
     }
+
+    // --- 处理从 lesson_text.html 跳转过来的预选参数 ---
+    const urlParams = new URLSearchParams(window.location.search);
+    const lessonToQuiz = urlParams.get('quiz_lesson');
+    if (lessonToQuiz) {
+        const checkboxId = `lesson-check-${lessonToQuiz}`;
+        const targetCheckbox = document.getElementById(checkboxId);
+        if (targetCheckbox) {
+            targetCheckbox.checked = true;
+            console.log(`Checkbox for lesson ${lessonToQuiz} checked via URL parameter.`);
+        } else {
+            console.warn(`Checkbox with ID ${checkboxId} for URL parameter not found.`);
+        }
+        // 清除 URL 参数，避免刷新页面时再次触发 (可选)
+        // window.history.replaceState({}, document.title, window.location.pathname);
+    }
+
+    // --- 设置按钮初始状态 ---
+    checkSelection(); // 根据当前勾选（包括 URL 参数处理后）设置按钮状态
+
+
+    // ============================================================
+    // === 新增：为 "开始单词测试" 按钮添加点击事件监听器 ===
+    // ============================================================
+    if (startQuizBtn && numQuestionsInput && quizTypeSelect) {
+        startQuizBtn.addEventListener('click', async () => {
+            // 1. 获取选中的课程
+            const selectedLessons = [];
+            lessonCheckboxes.forEach(checkbox => {
+                if (checkbox.checked) {
+                    selectedLessons.push(checkbox.value);
+                }
+            });
+
+            // 2. 检查是否选中了课程
+            if (selectedLessons.length === 0) {
+                showError('请至少选择一个课程进行测试。'); // 使用全局 showError
+                return; // 停止执行
+            }
+
+            // 3. 获取题目数量和测试类型
+            const numQuestions = numQuestionsInput.value || 10; // 获取值，若为空则默认10
+            const quizType = quizTypeSelect.value;
+
+            console.log(`Starting quiz with lessons: ${selectedLessons.join(',')}, count: ${numQuestions}, type: ${quizType}`);
+
+            // 4. 调用异步函数开始测验流程
+            await startQuizFromIndex(selectedLessons, numQuestions, quizType);
+        });
+        console.log("Event listener attached to startQuizBtn.");
+    } else {
+        console.warn("Could not find startQuizBtn, numQuestionsInput, or quizTypeSelect to attach listener.");
+    }
+
+
+    // --- 新增：开始测验的核心异步函数 (index.html 版本) ---
+    async function startQuizFromIndex(selectedLessonNumbers, numberOfQuestions, quizTypeValue) {
+        // --- 使用 quiz_logic.js 中的函数和变量 ---
+        resetQuizUI();      // 重置界面状态
+        showLoading(true);  // 显示加载动画
+        hideError();        // 隐藏之前的错误
+        if(startQuizBtn) startQuizBtn.disabled = true; // 禁用开始按钮
+
+        // --- 设置全局 quizContext ---
+        quizContext = {
+            lesson_ids: selectedLessonNumbers.map(n => parseInt(n)), // 确保是数字数组
+            quiz_type: quizTypeValue,
+            question_ids: [] // 稍后填充
+        };
+        console.log("Quiz context set for index:", quizContext);
+        // ----------------------------
+
+        try {
+            const lessonsParam = selectedLessonNumbers.join(',');
+            const response = await fetch(`/api/quiz?lessons=${lessonsParam}&count=${numberOfQuestions}&type=${quizTypeValue}`);
+            showLoading(false); // API 调用后隐藏加载
+
+            if (!response.ok) {
+                let errorMsg = `加载测验题目失败 (${response.status})`;
+                try { const errorData = await response.json(); errorMsg = errorData.error || errorMsg; } catch (e) {}
+                throw new Error(errorMsg);
+            }
+
+            // --- 设置全局 currentQuizData ---
+            currentQuizData = await response.json();
+            // -----------------------------
+
+            if (!currentQuizData || currentQuizData.length === 0) {
+                showError(`未能为选定课程加载词汇题。`);
+                if (quizArea) quizArea.classList.add('hidden');
+                if (startQuizBtn) startQuizBtn.disabled = false; // 重新启用开始按钮
+                return;
+            }
+
+            // --- 更新 quizContext 问题 ID ---
+            quizContext.question_ids = currentQuizData.map(q => q.id);
+            console.log("Quiz data loaded, question IDs:", quizContext.question_ids);
+            // -------------------------------
+
+            // 显示问题
+            displayQuestions(); // 来自 quiz_logic.js
+
+            // 确保提交按钮可见 (displayQuestions 也会做，双重保险)
+            if (submitQuizBtn) submitQuizBtn.classList.remove('hidden');
+
+            // 滚动到测验区域 (可选，但体验更好)
+            if (quizArea) {
+                 quizArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+
+        } catch (error) {
+            console.error('Error starting quiz from index:', error);
+            showError(`开始测试失败: ${error.message}`);
+            if (quizArea) quizArea.classList.add('hidden');
+            if (startQuizBtn) startQuizBtn.disabled = false; // 出错时重新启用按钮
+            showLoading(false);
+        }
+    }
+
+    // --- 新增：为 restart-quiz-btn 添加特定于首页的逻辑 ---
+    // 这个按钮在 results-area 内
+    const restartIndexBtn = document.getElementById('restart-quiz-btn');
+    if (restartIndexBtn) {
+        restartIndexBtn.addEventListener('click', () => {
+            console.log("Restarting quiz from index page...");
+            resetQuizUI(); // 重置界面
+            // 滚动回课程选择区域
+            const lessonSection = document.getElementById('lesson-selection-section');
+            if(lessonSection) {
+                lessonSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            // 用户需要重新选择课程并点击 "开始单词测试"
+            // 注意：如果你希望它自动重新开始上一次的测验，
+            // 你需要保存上一次的 selectedLessons, numQuestions, quizType
+            // 然后在这里调用 startQuizFromIndex(savedLessons, savedNum, savedType)
+        });
+        console.log("Event listener attached to restartIndexBtn.");
+    } else {
+        console.warn("Restart button (#restart-quiz-btn) not found on index page load.");
+    }
+
 });
 </script>
 {% endblock %}

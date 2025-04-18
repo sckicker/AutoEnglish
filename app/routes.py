@@ -16,6 +16,8 @@ from .forms import LoginForm, RegistrationForm    # Import forms
 from .pdf_parser import process_nce_pdf # Import your PDF processing function
 from .decorators import admin_required, root_admin_required # 导入装饰器
 from flask import abort # 导入 abort
+from flask import jsonify, request # Ensure jsonify and request are imported
+from .models import WrongAnswer, Vocabulary # Ensure WrongAnswer is imported
 
 # --- 主要应用路由 ---
 
@@ -268,6 +270,92 @@ def submit_quiz_results():
         return jsonify({'error': 'Failed to save results due to an internal error.'}), 500
 
 
+# --- Define allowed categories (can be moved to config.py later) ---
+ALLOWED_WRONG_ANSWER_CATEGORIES = ["重点复习", "易混淆", "拼写困难", "用法模糊", "暂不复习"]
+
+@current_app.route('/wrong_answers')
+@login_required
+def wrong_answers():
+    """显示用户的错题本"""
+    try:
+        wrong_answer_records = WrongAnswer.query.filter_by(user_id=current_user.id)\
+                                            .options(joinedload(WrongAnswer.vocabulary_item))\
+                                            .order_by(WrongAnswer.timestamp_last_wrong.desc()).all()
+        return render_template('wrong_answers.html',
+                               title='错题本 (Wrong Answers)',
+                               wrong_answers=wrong_answer_records,
+                               allowed_categories=ALLOWED_WRONG_ANSWER_CATEGORIES)
+    except Exception as e:
+        current_app.logger.error(f"Error fetching wrong answers for user {current_user.id}: {e}", exc_info=True)
+        flash('加载错题本时发生错误，请稍后重试。(An error occurred while loading wrong answers.)', 'danger')
+        # --- 返回一个响应 ---
+        # 选项 2.1: 重定向回首页
+        return redirect(url_for('index'))
+        # 选项 2.2: 渲染一个通用的错误模板 (需要创建 error.html)
+        # return render_template('error.html', error_message='无法加载错题本'), 500
+        # 选项 2.3: 中止请求并显示服务器错误页面
+        # abort(500) # 需要导入 abort from flask
+
+
+# --- NEW API Route: Toggle Mark Status ---
+@current_app.route('/api/wrong_answer/<int:wrong_answer_id>/toggle_mark', methods=['POST'])
+@login_required
+# @csrf.exempt # Uncomment if using Flask-WTF CSRF globally and calling via basic fetch without form
+def toggle_mark_wrong_answer(wrong_answer_id):
+    """API endpoint to mark or unmark a wrong answer item."""
+    wrong_answer = WrongAnswer.query.get_or_404(wrong_answer_id)
+
+    # Security check: Ensure the item belongs to the current user
+    if wrong_answer.user_id != current_user.id:
+        current_app.logger.warning(f"User {current_user.id} attempted to modify wrong answer {wrong_answer_id} owned by user {wrong_answer.user_id}")
+        return jsonify({'success': False, 'error': 'Permission denied'}), 403
+
+    try:
+        wrong_answer.is_marked = not wrong_answer.is_marked
+        db.session.add(wrong_answer)
+        db.session.commit()
+        current_app.logger.info(f"User {current_user.id} toggled mark status for wrong answer {wrong_answer_id} to {wrong_answer.is_marked}")
+        return jsonify({'success': True, 'is_marked': wrong_answer.is_marked})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error toggling mark status for wrong answer {wrong_answer_id}: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': 'Database error'}), 500
+
+
+# --- NEW API Route: Set Category ---
+@current_app.route('/api/wrong_answer/<int:wrong_answer_id>/set_category', methods=['POST'])
+@login_required
+# @csrf.exempt # Uncomment if using Flask-WTF CSRF globally and calling via basic fetch without form
+def set_category_wrong_answer(wrong_answer_id):
+    """API endpoint to set the category for a wrong answer item."""
+    wrong_answer = WrongAnswer.query.get_or_404(wrong_answer_id)
+    data = request.get_json()
+
+    if not data or 'category' not in data:
+        return jsonify({'success': False, 'error': 'Missing category data'}), 400
+
+    new_category = data.get('category')
+
+    # Validate category: allow setting to None (removing category) or selecting from allowed list
+    if new_category is not None and new_category not in ALLOWED_WRONG_ANSWER_CATEGORIES:
+         return jsonify({'success': False, 'error': 'Invalid category provided'}), 400
+
+    # Security check: Ensure the item belongs to the current user
+    if wrong_answer.user_id != current_user.id:
+        current_app.logger.warning(f"User {current_user.id} attempted to categorize wrong answer {wrong_answer_id} owned by user {wrong_answer.user_id}")
+        return jsonify({'success': False, 'error': 'Permission denied'}), 403
+
+    try:
+        wrong_answer.category = new_category # Set to None if empty string or None is passed
+        db.session.add(wrong_answer)
+        db.session.commit()
+        current_app.logger.info(f"User {current_user.id} set category for wrong answer {wrong_answer_id} to '{wrong_answer.category}'")
+        return jsonify({'success': True, 'category': wrong_answer.category})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error setting category for wrong answer {wrong_answer_id}: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': 'Database error'}), 500
+
 # --- 用户认证路由 ---
 @current_app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -340,24 +428,8 @@ def history():
          flash('无法加载测试历史记录。(Failed to load quiz history.)', 'danger')
          attempts = None # 传递 None 到模板
 
+    now = datetime.utcnow()
     return render_template('history.html', title='测试历史 (Quiz History)', attempts=attempts)
-
-
-@current_app.route('/wrong_answers')
-@login_required
-def wrong_answers():
-    """显示用户的错题本"""
-    try:
-        # 使用 joinedload 预加载关联的 Vocabulary 信息，提高效率
-        wrong_answer_records = WrongAnswer.query.filter_by(user_id=current_user.id)\
-                                            .options(joinedload(WrongAnswer.vocabulary_item))\
-                                            .order_by(WrongAnswer.timestamp_last_wrong.desc()).all()
-    except Exception as e:
-        current_app.logger.error(f"Error fetching wrong answers for user {current_user.id}: {e}", exc_info=True)
-        flash('无法加载错题本。(Failed to load wrong answers.)', 'danger')
-        wrong_answer_records = [] # 传递空列表
-
-    return render_template('wrong_answers.html', title='错题本 (Wrong Answers)', wrong_answers=wrong_answer_records)
 
 # --- 保护现有管理路由 ---
 @current_app.route('/admin/dashboard')

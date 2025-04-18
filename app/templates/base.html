@@ -4,66 +4,71 @@
     <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    {# --- 添加 CSRF Token Meta Tag (如果还没加的话) --- #}
+
+    {# --- CSRF Token for AJAX requests --- #}
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    {# --- Bootstrap Icons CSS --- #}
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
 
-    {# --- 你自定义的 CSS (如果需要) --- #}
+    {# --- Bootstrap Icons CSS --- #}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+    {# --- Your Custom CSS --- #}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 
-    <title>{% block title %}NCE Vocab Project{% endblock %}</title>
-    {% block styles_extra %}{% endblock %} {# 用于页面特定 CSS #}
+    <title>{% block title %}NCE Vocab Project{% endblock %} - 新概念词汇学习</title>
+
+    {# --- Block for extra page-specific CSS --- #}
+    {% block styles_extra %}{% endblock %}
 </head>
-<body>
+<body class="d-flex flex-column min-vh-100">
 
-    {# =============== 开始：修改导航栏 =============== #}
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4"> {# 使用深色背景，底部加边距 #}
+    {# --- Navigation Bar --- #}
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4 shadow-sm">
         <div class="container-fluid">
-            {# Logo 或网站名称 #}
-            <a class="navbar-brand" href="{{ url_for('index') }}">新概念词汇平台</a>
+            {# --- Brand/Logo --- #}
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="bi bi-book-half"></i> NCE 学习平台
+            </a>
 
-            {# 移动端切换按钮 #}
+            {# --- Mobile Toggle Button --- #}
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
 
-            {# 导航栏内容 #}
+            {# --- Collapsible Navbar Content --- #}
             <div class="collapse navbar-collapse" id="navbarNav">
-                {# --- 左侧导航链接 --- #}
+                {# --- Left-aligned Navigation Items --- #}
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0">
                     <li class="nav-item">
                         <a class="nav-link {{ 'active' if request.endpoint == 'index' else '' }}" aria-current="page" href="{{ url_for('index') }}">
                             <i class="bi bi-house-door"></i> 首页 (Home)
                         </a>
                     </li>
-                     <li class="nav-item">
-                         <a class="nav-link {{ 'active' if request.endpoint == 'view_lessons' else '' }}" href="{{ url_for('view_lessons') }}">
-                             <i class="bi bi-list-columns-reverse"></i> 课程列表
-                         </a>
-                     </li>
-                    {# 你可以在这里添加其他主要的导航链接 #}
+                    <li class="nav-item">
+                        <a class="nav-link {{ 'active' if request.endpoint == 'view_lessons' else '' }}" href="{{ url_for('view_lessons') }}">
+                            <i class="bi bi-list-columns-reverse"></i> 课程列表
+                        </a>
+                    </li>
+                    {# 其他主要导航链接 #}
                 </ul>
 
-                {# --- 右侧用户相关链接 --- #}
-                <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+                {# --- Right-aligned User/Auth Items --- #}
+                <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-center">
                     {% if current_user.is_authenticated %}
-                        {# --- 如果用户已登录 --- #}
+                        {# --- 已登录用户链接 --- #}
 
                         {# 管理面板链接 (仅管理员可见) #}
-                        {% if current_user.is_admin %} {# 假设 User 模型有 is_admin 属性 #}
+                        {% if current_user.is_admin %}
                             <li class="nav-item">
-                                {# 高亮管理后台相关页面 #}
                                 <a class="nav-link {{ 'active' if request.endpoint.startswith('admin_') or request.endpoint in ['manage_vocabulary', 'manage_users'] else '' }}" href="{{ url_for('admin_dashboard') }}">
                                     <i class="bi bi-shield-lock"></i> 管理面板
                                 </a>
                             </li>
                         {% endif %}
 
-                        {# 学习记录和错题本链接 (所有登录用户可见) #}
+                        {# 学习记录链接 #}
                          <li class="nav-item">
                              <a class="nav-link {{ 'active' if request.endpoint == 'history' else '' }}" href="{{ url_for('history') }}"><i class="bi bi-clock-history"></i> 测试历史</a>
                          </li>
@@ -71,17 +76,21 @@
                              <a class="nav-link {{ 'active' if request.endpoint == 'wrong_answers' else '' }}" href="{{ url_for('wrong_answers') }}"><i class="bi bi-x-octagon"></i> 错题本</a>
                          </li>
 
-                        {# 用户名和登出下拉菜单 #}
+                        {# 用户下拉菜单 #}
                          <li class="nav-item dropdown">
                            <a class="nav-link dropdown-toggle" href="#" id="navbarUserDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                             <i class="bi bi-person-circle"></i> {{ current_user.username }}
+                             <i class="bi bi-person-circle"></i>
+                             {{ current_user.username }}
+                             {# === 修改：总是显示用户等级 Badge === #}
+                             {% if current_user.is_admin %}
+                                 <span class="badge rounded-pill bg-danger ms-1">管理员</span> {# 管理员用红色 #}
+                             {% else %}
+                                 <span class="badge rounded-pill bg-secondary ms-1">普通用户</span> {# 普通用户用灰色 #}
+                             {% endif %}
+                             {# === 结束修改 === #}
                            </a>
                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarUserDropdown">
-                             {# 可以在这里添加“个人资料”等链接 #}
-                             {# <li><a class="dropdown-item" href="#">个人资料</a></li> #}
-                             {# <li><hr class="dropdown-divider"></li> #}
                              <li>
-                                 {# --- 正确的登出链接 --- #}
                                  <a class="dropdown-item" href="{{ url_for('logout') }}">
                                      <i class="bi bi-box-arrow-right"></i> 登出 (Logout)
                                  </a>
@@ -90,7 +99,7 @@
                          </li>
 
                     {% else %}
-                        {# --- 如果用户未登录 --- #}
+                        {# --- 未登录用户链接 --- #}
                         <li class="nav-item">
                             <a class="nav-link {{ 'active' if request.endpoint == 'login' else '' }}" href="{{ url_for('login') }}">
                                 <i class="bi bi-box-arrow-in-right"></i> 登录 (Login)
@@ -103,49 +112,54 @@
                         </li>
                     {% endif %}
                 </ul>
-            </div>{# / .navbar-collapse #}
-        </div>{# / .container-fluid #}
+            </div><!-- /.navbar-collapse -->
+        </div><!-- /.container-fluid -->
     </nav>
-    {# =============== 结束：修改导航栏 =============== #}
+    {# --- End Navigation Bar --- #}
 
+    {# --- Main Content Area --- #}
+    <main role="main" class="container flex-grow-1 my-4">
 
-    {# --- Flash 消息显示区域 --- #}
-    <div class="container">
+        {# --- Flash Message Display --- #}
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
+                <div class="flashed-messages">
                 {% for category, message in messages %}
                     <div class="alert alert-{{ category or 'info' }} alert-dismissible fade show" role="alert">
                         {{ message }}
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
                 {% endfor %}
+                </div>
             {% endif %}
         {% endwith %}
-    </div>
-    {# -------------------------- #}
+        {# --- End Flash Messages --- #}
 
-
-    {# --- 主要页面内容块 --- #}
-    <main role="main" class="container">
+        {# --- Content Block for Child Templates --- #}
         {% block content %}{% endblock %}
+
     </main>
-    {# ---------------------- #}
+    {# --- End Main Content Area --- #}
 
-
-    {# --- 页脚 (可选) --- #}
-    <footer class="footer mt-auto py-3 bg-light">
+    {# --- Footer --- #}
+    <footer class="footer py-3 bg-light border-top">
       <div class="container text-center">
-        <span class="text-muted">NCE Vocab Project © {{ current_time.year if current_time else '2024' }}. 请注意《新概念英语》版权。</span>
+        <span class="text-muted">NCE Vocab Project ©2025. 请注意《新概念英语》版权。</span>
       </div>
     </footer>
-    {# ----------------- #}
+    {# --- End Footer --- #}
 
-
+    {# --- JavaScript Includes --- #}
     <!-- Bootstrap Bundle with Popper -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
 
-    {# 用于页面特定 JavaScript #}
+    {# --- Load YOUR Shared/Global JavaScript Logic --- #}
+    <script src="{{ url_for('static', filename='js/quiz_logic.js') }}"></script>
+    {# --------------------------------------------- #}
+
+    {# --- Block for extra page-specific JavaScript --- #}
     {% block scripts_extra %}{% endblock %}
+    {# --------------------------------------------- #}
 
 </body>
 </html>

@@ -201,3 +201,75 @@ input.form-control.is-invalid { border-color: #dc3545; background-color: #fff0f0
 .admin-login-area h4.h6 { font-weight: 600; margin-bottom: 0.75rem; }
 .admin-login-area .form-control-sm { font-size: 0.875rem; }
 .admin-login-area .btn-sm { font-size: 0.875rem; padding: 0.25rem 0.5rem; }
+
+/* === 添加到 static/css/style.css 或者 index.html 的 styles_extra 块 === */
+
+/* --- 针对课程选择区域内的卡片 --- */
+#lesson-selection-section .card {
+    /* 设置渐变背景 */
+    /* 方向：从左上到右下 (135度) */
+    /* 颜色：从 Bootstrap 主色 到 一个青色/蓝绿色 */
+    background-image: linear-gradient(135deg, var(--bs-primary), var(--bs-teal));
+
+    /* 或者 蓝色到紫色 */
+    /* background-image: linear-gradient(135deg, #0d6efd, #8a4fcc); */
+
+    /* 确保文字在深色背景上可读 */
+    color: white;
+
+    /* 移除默认边框，让渐变填充 */
+    border: none;
+
+    /* 添加过渡效果，让悬停更平滑 */
+    transition: transform 0.25s ease-in-out, box-shadow 0.25s ease-in-out;
+}
+
+/* --- 调整卡片内部元素的颜色 --- */
+#lesson-selection-section .card .card-title {
+    color: white; /* 标题颜色 */
+}
+
+/* 调整 "查看课文" 按钮样式 */
+#lesson-selection-section .card .btn-outline-primary {
+    color: rgba(255, 255, 255, 0.9); /* 按钮文字颜色 (白色，稍透明) */
+    border-color: rgba(255, 255, 255, 0.5); /* 按钮边框颜色 (白色，半透明) */
+    background-color: transparent; /* 确保背景透明 */
+}
+/* 调整 "查看课文" 按钮悬停效果 */
+#lesson-selection-section .card .btn-outline-primary:hover {
+    color: var(--bs-primary);       /* 悬停时文字变为主色 (或其他亮色) */
+    background-color: rgba(255, 255, 255, 0.9); /* 悬停时背景变白 (稍透明) */
+    border-color: white;             /* 悬停时边框变实白 */
+}
+/* 确保按钮内的图标颜色也调整 */
+#lesson-selection-section .card .btn-outline-primary i {
+   /* 颜色通常会继承按钮文字颜色，这里可以不设置，或者强制设置 */
+   /* color: rgba(255, 255, 255, 0.9); */
+}
+ #lesson-selection-section .card .btn-outline-primary:hover i {
+   /* color: var(--bs-primary); */
+}
+
+
+/* 调整复选框标签颜色 */
+#lesson-selection-section .card .form-check-label {
+    color: rgba(255, 255, 255, 0.8); /* 标签文字颜色 (白色，更透明) */
+}
+/* 调整复选框本身的边框颜色（可选） */
+#lesson-selection-section .card .form-check-input {
+   /* background-color: rgba(255, 255, 255, 0.1); */
+   /* border-color: rgba(255, 255, 255, 0.5); */
+}
+ #lesson-selection-section .card .form-check-input:checked {
+     background-color: var(--bs-success); /* 选中时用成功色 */
+     border-color: var(--bs-success);
+ }
+
+
+/* --- 添加悬停效果 --- */
+#lesson-selection-section .card:hover {
+    transform: translateY(-5px) scale(1.02); /* 轻微上移并放大 */
+    box-shadow: 0 0.75rem 1.5rem rgba(0, 0, 0, 0.2) !important; /* 增强阴影 */
+}
+
+/* === CSS 结束 === */

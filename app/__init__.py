@@ -1,138 +1,128 @@
-# app/__init__.py - Updated for Auth and Extensions
+# app/__init__.py
 
 import os
 import logging
 from logging.handlers import RotatingFileHandler
-import sys
-from flask import Flask
+from flask import Flask, current_app # Import current_app
 from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate # 新增
-from flask_login import LoginManager # 新增
-from flask_wtf.csrf import CSRFProtect # 新增
+from flask_migrate import Migrate
+from flask_login import LoginManager
+from flask_wtf.csrf import CSRFProtect
+from datetime import datetime # Import datetime
 
-from config import Config # 从 config.py 导入配置
+from config import Config # Import your Config class
 
-# --- 实例化扩展 ---
+# Instantiate extensions (globally accessible within the app package)
 db = SQLAlchemy()
-migrate = Migrate() # 用于数据库迁移
-login = LoginManager() # 用于用户登录管理
-# 配置 Flask-Login:
-# 'login' 是指处理登录的路由函数(endpoint)的名称 (在 routes.py 中定义)
-login.login_view = 'login'
-# 当未登录用户访问需要登录的页面时，显示的 flash 消息
+migrate = Migrate()
+login = LoginManager()
+csrf = CSRFProtect()
+
+# Configure Flask-Login settings
+login.login_view = 'login' # The endpoint name of your login route
 login.login_message = '请先登录以访问此页面。(Please log in to access this page.)'
-# flash 消息的类别 (通常用于 Bootstrap 的 alert 样式)
-login.login_message_category = 'info'
+login.login_message_category = 'info' # Bootstrap alert class
 
-csrf = CSRFProtect() # 用于 CSRF 保护
-
-# --- 应用工厂函数 ---
+# --- Application Factory ---
 def create_app(config_class=Config):
-    """Application Factory Pattern"""
+    """Creates and configures the Flask application instance."""
     app = Flask(__name__, instance_relative_config=True)
-    # --- 从配置对象加载配置 (包括 SECRET_KEY) ---
+
+    # Load configuration from the specified class
     app.config.from_object(config_class)
-    # 确保 SECRET_KEY 已在 config.py 或环境变量中设置！
-    if not app.config.get('SECRET_KEY'):
-        raise ValueError("No SECRET_KEY set for Flask application")
 
+    # Ensure SECRET_KEY is set (critical check)
+    if not app.config.get('SECRET_KEY') or \
+       app.config['SECRET_KEY'] == 'a-very-insecure-default-key-CHANGE-THIS-IMMEDIATELY!':
+        app.logger.critical("FATAL: SECRET_KEY is not set or is using the insecure default!")
+        # Optionally raise an error to prevent startup in production
+        # raise ValueError("SECRET_KEY not set or is insecure.")
 
-    # --- 初始化 Flask 扩展 ---
-    db.init_app(app)
-    migrate.init_app(app, db) # 关联 app 和 db
-    login.init_app(app)       # 关联 app
-    csrf.init_app(app)        # 关联 app
-
-
-    # --- 日志设置 (调整级别和 Debug 模式处理) ---
+    # Ensure instance folder exists (for SQLite DB, logs, etc.)
     try:
-        # Ensure instance path exists for log files etc.
-        instance_path = app.instance_path
-        log_dir = os.path.join(instance_path, 'logs')
-        os.makedirs(log_dir, exist_ok=True)
-        # print(f"Instance path: {instance_path}") # Print 语句在生产中可能不适用
-        # print(f"Log directory: {log_dir}")
+        os.makedirs(app.instance_path, exist_ok=True)
     except OSError as e:
-        app.logger.error(f"Error creating instance or log directory: {e}")
+        app.logger.error(f"Could not create instance folder at {app.instance_path}: {e}")
 
+    # Initialize extensions with the app instance
+    db.init_app(app)
+    migrate.init_app(app, db)
+    login.init_app(app)
+    csrf.init_app(app)
+
+    # --- Configure Logging ---
+    log_dir = os.path.join(app.instance_path, 'logs')
+    os.makedirs(log_dir, exist_ok=True)
     log_formatter = logging.Formatter(
-         '%(asctime)s - %(name)s - %(levelname)s - %(message)s [in %(pathname)s:%(lineno)d]'
+        '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
     )
 
-    if not app.debug and not app.testing:
-        # --- 生产环境日志配置 (非 Debug 模式) ---
-        app.logger.setLevel(logging.INFO) # ** 设置为 INFO **
-
+    if app.debug or app.testing:
+        # Development/Testing Logging (Console primarily)
+        app.logger.setLevel(logging.DEBUG)
+        # Flask's default handler usually logs to console in debug mode
+        app.logger.info('Flask App Startup - Debug/Testing Mode - Logging to console.')
+    else:
+        # Production Logging (File-based)
+        app.logger.setLevel(logging.INFO)
         log_file = os.path.join(log_dir, 'app.log')
         file_handler = RotatingFileHandler(
-            log_file, maxBytes=1024*1024*5, backupCount=5, encoding='utf-8'
+            log_file, maxBytes=1024*1024*5, backupCount=10, encoding='utf-8'
         )
         file_handler.setFormatter(log_formatter)
-        file_handler.setLevel(logging.INFO) # ** 文件也设为 INFO **
+        file_handler.setLevel(logging.INFO)
 
-        # 只添加我们自己的文件处理器 (如果 Flask 默认有其他处理器，它们可能仍然工作)
-        # 如果想完全控制，需要先清空 app.logger.handlers
-        if not app.logger.handlers: # 避免重复添加（虽然 Flask 可能自己处理）
-             app.logger.addHandler(file_handler)
-        else:
-             # 如果已有 handler, 可以选择替换或只添加我们的
-             # 为安全起见，这里只添加，但生产中可能需要更精细控制
-             app.logger.addHandler(file_handler)
+        # Clear existing handlers and add our file handler
+        app.logger.handlers.clear()
+        app.logger.addHandler(file_handler)
+        app.logger.info('Flask App Startup - Production Mode - Logging to app.log.')
 
+    # --- Context Processors and Global Template Variables ---
+    @app.context_processor
+    def inject_current_time():
+        """Make current UTC time available to all templates."""
+        return {'current_time': datetime.utcnow()}
 
-        app.logger.info('Flask App Startup - Production Logging Enabled (INFO level to app.log).')
-
-    else:
-        # --- 开发环境日志配置 (Debug 模式) ---
-        app.logger.setLevel(logging.DEBUG) # ** Debug 模式下级别设为 DEBUG **
-        # 通常 Flask 开发服务器会配置一个 StreamHandler 输出到控制台
-        # 我们不再添加 RotatingFileHandler 来避免文件锁问题
-        app.logger.info('Flask App Startup - Debug Logging Enabled (DEBUG level, primarily to console).')
-        # 如果需要 debug 文件日志，可取消下面的注释 (使用 FileHandler)
-        # try:
-        #     debug_log_file = os.path.join(log_dir, 'debug_dev.log')
-        #     debug_file_handler = logging.FileHandler(debug_log_file, mode='a', encoding='utf-8')
-        #     debug_file_handler.setFormatter(log_formatter)
-        #     debug_file_handler.setLevel(logging.DEBUG)
-        #     app.logger.addHandler(debug_file_handler)
-        #     app.logger.info('Debug file logging also enabled (debug_dev.log).')
-        # except Exception as log_ex:
-        #      app.logger.error(f"Failed to setup debug file logging: {log_ex}")
-
-
-    # --- 注册 Blueprint 或导入路由/模型 ---
+    # --- Import Blueprints, Models, Routes ---
     with app.app_context():
-        # 导入模型非常重要，特别是 User 模型，因为 user_loader 需要它
-        from . import models
-        # 导入路由定义
-        from . import routes
+        # Import models here is crucial for Flask-Migrate and Flask-Login
+        from . import models # Loads model definitions
+        # Import routes (which define view functions and endpoints)
+        from . import routes # Loads route definitions
+        # Import CLI commands if defined in a separate file/blueprint
+        # from . import commands # Example if commands were in app/commands.py
 
-        # --- 数据库创建/迁移 ---
-        # 对于开发，db.create_all() 可以快速创建表
-        # !!! 警告: 这不会处理后续模型的更改 !!!
-        # !!! 生产环境或需要管理模型变更时，请使用 Flask-Migrate !!!
-        # flask db init (仅一次)
-        # flask db migrate -m "Some description"
-        # flask db upgrade
+        # Optional: Initial DB creation check for development ease
+        # Note: Use Flask-Migrate ('flask db upgrade') for production/schema changes
         try:
-            # 可以暂时保留 create_all 用于快速启动开发
-            db.create_all()
-            app.logger.info("Database tables checked/created via db.create_all(). REMINDER: Use Flask-Migrate for production/updates.")
+            # Check if DB file exists before calling create_all, maybe?
+            # Or just let create_all be idempotent
+            # db.create_all() # This only creates tables if they don't exist
+            # app.logger.debug("db.create_all() checked for table existence.")
+            pass # Rely on 'flask db upgrade' workflow
         except Exception as e:
-            app.logger.error(f"Error during db.create_all(): {e}", exc_info=True)
+            app.logger.error(f"Error during initial db setup check: {e}", exc_info=True)
 
-    app.logger.info("Flask app instance created and configured successfully.")
+    app.logger.info("Flask app instance created successfully.")
     return app
 
-# --- Flask-Login user_loader 回调函数 ---
-# 这个函数必须在全局作用域或者可以通过 login manager 找到的地方定义
-# 它告诉 Flask-Login 如何根据存储在 session 中的用户 ID 找到对应的用户对象
-from .models import User # 确保 User 模型已导入
+# --- Flask-Login User Loader ---
+# This MUST be defined at the module level or imported where login manager can find it
+from .models import User # Import User model again for the loader
+
 @login.user_loader
 def load_user(id):
-    """Flask-Login required callback to load a user by ID."""
+    """Callback function required by Flask-Login to load a user by ID."""
     try:
-        return User.query.get(int(id))
+        user_id = int(id)
+        user = User.query.get(user_id)
+        if not user:
+            current_app.logger.warning(f"User ID {user_id} not found in user_loader.")
+        return user
+    except ValueError:
+        current_app.logger.error(f"Invalid non-integer user ID passed to user_loader: {id}")
+        return None
     except Exception as e:
-        current_app.logger.error(f"Error loading user {id}: {e}", exc_info=True)
+        # Use current_app.logger here as 'app' isn't in scope
+        current_app.logger.error(f"Error loading user {id} in user_loader: {e}", exc_info=True)
         return None

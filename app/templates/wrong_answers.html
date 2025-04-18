@@ -1,47 +1,190 @@
-{# app/templates/wrong_answers.html - 错题本页面 #}
+{# app/templates/wrong_answers.html - Enhanced #}
 {% extends "base.html" %}
 
-{% block title %}错题本 - 新概念学习平台{% endblock %}
+{% block title %}{{ title }} - NCE 学习平台{% endblock %}
 
 {% block content %}
-<h2 class="mb-4">我的错题本 (My Wrong Answers)</h2>
+<div class="container mt-4 mb-5">
+    <h1 class="mb-4">{{ title }}</h1>
 
-{% if wrong_answers %}
-    <p class="text-muted mb-3">这里记录了你答错过的单词，可以经常复习哦！(Review the words you got wrong.)</p>
-    {# 使用 List Group 展示错题 #}
-    <div class="list-group shadow-sm">
-        {% for wrong in wrong_answers %}
-            <div class="list-group-item list-group-item-action flex-column align-items-start">
-                <div class="d-flex w-100 justify-content-between">
-                    <h5 class="mb-1">
-                        {# 链接到单词所在的课文页面 #}
-                        <a href="{{ url_for('view_lesson', lesson_number=wrong.vocabulary_item.lesson_number) }}" class="text-decoration-none">
-                            <span class="fw-bold">{{ wrong.vocabulary_item.english_word }}</span>
-                            {% if wrong.vocabulary_item.part_of_speech %}
-                                <small class="text-muted">({{ wrong.vocabulary_item.part_of_speech }})</small>
-                            {% endif %}
-                        </a>
-                    </h5>
-                    {# 显示最后出错时间，需要格式化 #}
-                    <small class="text-muted" title="{{ wrong.timestamp_last_wrong.strftime('%Y-%m-%d %H:%M:%S') if wrong.timestamp_last_wrong else '' }}">
-                        Last wrong: {{ wrong.timestamp_last_wrong.strftime('%Y-%m-%d') if wrong.timestamp_last_wrong else 'N/A' }}
-                    </small>
-                </div>
-                <p class="mb-1">{{ wrong.vocabulary_item.chinese_translation }}</p>
-                <small class="text-muted">来自 (From) Lesson {{ wrong.vocabulary_item.lesson_number }} | 错误次数 (Count): {{ wrong.incorrect_count or 1 }}</small>
-                 {# Optional: Add a button to re-quiz this specific word or lesson #}
-                 {# <button class="btn btn-sm btn-outline-warning float-end">Re-Quiz</button> #}
-            </div>
-        {% endfor %}
-    </div>
-{% else %}
-    <div class="alert alert-success" role="alert">
-      太棒了！你的错题本是空的。(Great! Your wrong answer list is empty.)
-    </div>
-{% endif %}
+    {% if wrong_answers %}
+        <div class="table-responsive"> {# Make table scroll on small screens #}
+            <table class="table table-striped table-hover table-sm align-middle"> {# align-middle vertically centers content #}
+                <thead class="table-light">
+                    <tr>
+                        <th scope="col" style="width: 8%;">课号</th>
+                        <th scope="col">英文单词</th>
+                        <th scope="col">中文翻译</th>
+                        <th scope="col" style="width: 10%;">词性</th>
+                        <th scope="col" style="width: 10%;">错误次数</th>
+                        <th scope="col" style="width: 15%;">最后错误时间</th>
+                        {# --- New Columns --- #}
+                        <th scope="col" style="width: 5%; text-align: center;" title="标记重点">标记</th>
+                        <th scope="col" style="width: 15%;">分类</th>
+                        {# --- End New Columns --- #}
+                        <th scope="col" style="width: 10%;">操作</th> {# Actions column if needed later #}
+                    </tr>
+                </thead>
+                <tbody id="wrong-answer-table-body"> {# Add ID for easier JS targeting #}
+                    {% for wrong_answer in wrong_answers %}
+                        {# --- Add data-wrong-answer-id to the row --- #}
+                        <tr data-wrong-answer-id="{{ wrong_answer.id }}">
+                            <td>{{ wrong_answer.vocabulary_item.lesson_number }}</td>
+                            <td>{{ wrong_answer.vocabulary_item.english_word }}</td>
+                            <td>{{ wrong_answer.vocabulary_item.chinese_translation }}</td>
+                            <td>{{ wrong_answer.vocabulary_item.part_of_speech }}</td>
+                            <td>{{ wrong_answer.incorrect_count }}</td>
+                            <td><small>{{ wrong_answer.timestamp_last_wrong.strftime('%Y-%m-%d %H:%M') if wrong_answer.timestamp_last_wrong else 'N/A' }}</small></td>
+                            {# --- New Cells --- #}
+                            <td style="text-align: center;">
+                                {# --- Marking Button/Icon --- #}
+                                <button class="btn btn-sm btn-link p-0 mark-toggle-button" title="{% if wrong_answer.is_marked %}取消标记{% else %}标记为重点{% endif %}">
+                                    <i class="bi {{ 'bi-bookmark-check-fill text-success' if wrong_answer.is_marked else 'bi-bookmark text-muted' }}"></i>
+                                </button>
+                            </td>
+                            <td>
+                                {# --- Category Dropdown --- #}
+                                <div class="dropdown category-dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle w-100 text-start" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        {# Display current category or placeholder #}
+                                        <span class="current-category">{{ wrong_answer.category or '未分类' }}</span>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        {# Loop through allowed categories passed from backend #}
+                                        {% for cat in allowed_categories %}
+                                        <li><a class="dropdown-item category-select-item" href="#" data-category="{{ cat }}">{{ cat }}</a></li>
+                                        {% endfor %}
+                                        {# Option to remove category #}
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item category-select-item text-danger" href="#" data-category="">移除分类</a></li>
+                                    </ul>
+                                </div>
+                            </td>
+                             {# --- End New Cells --- #}
+                            <td>
+                                {# Add other actions like "Delete from list" later if needed #}
+                                <button class="btn btn-sm btn-outline-danger disabled" title="从错题本移除 (功能待实现)"><i class="bi bi-trash"></i></button>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="alert alert-info" role="alert">
+            太棒了！你的错题本是空的。(Great! Your wrong answer list is empty.)
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
 
-{# Optional: Add button to quiz all wrong answers #}
-{# <div class="mt-4 text-center"> <button class="btn btn-warning">测试所有错题 (Quiz All Wrong Answers)</button> </div> #}
+{# --- Add JavaScript block for interactivity --- #}
+{% block scripts_extra %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const tableBody = document.getElementById('wrong-answer-table-body');
+    // --- Get CSRF token if needed (check if @csrf.exempt is used on API routes) ---
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 
+    if (tableBody) {
+        tableBody.addEventListener('click', async (event) => {
+            const target = event.target;
+            const markButton = target.closest('.mark-toggle-button');
+            const categoryItem = target.closest('.category-select-item');
 
+            // --- Handle Marking ---
+            if (markButton) {
+                event.preventDefault();
+                const row = markButton.closest('tr');
+                const wrongAnswerId = row.dataset.wrongAnswerId;
+                const icon = markButton.querySelector('i');
+
+                if (!wrongAnswerId) return;
+
+                try {
+                    const response = await fetch(`/api/wrong_answer/${wrongAnswerId}/toggle_mark`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            // Add CSRF token header if needed
+                            ...(csrfToken && {'X-CSRFToken': csrfToken})
+                        },
+                        // No body needed for toggle
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Server error: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        // Update UI based on response
+                        if (data.is_marked) {
+                            icon.classList.remove('bi-bookmark', 'text-muted');
+                            icon.classList.add('bi-bookmark-check-fill', 'text-success');
+                            markButton.title = "取消标记";
+                        } else {
+                            icon.classList.remove('bi-bookmark-check-fill', 'text-success');
+                            icon.classList.add('bi-bookmark', 'text-muted');
+                             markButton.title = "标记为重点";
+                        }
+                        console.log(`Mark toggled for ${wrongAnswerId} to ${data.is_marked}`);
+                    } else {
+                        console.error("Failed to toggle mark:", data.error);
+                        alert(`操作失败: ${data.error || '未知错误'}`);
+                    }
+
+                } catch (error) {
+                    console.error('Error toggling mark:', error);
+                    alert(`网络或脚本错误: ${error.message}`);
+                }
+            }
+
+            // --- Handle Categorization ---
+            if (categoryItem) {
+                event.preventDefault();
+                const row = categoryItem.closest('tr');
+                const wrongAnswerId = row.dataset.wrongAnswerId;
+                const selectedCategory = categoryItem.dataset.category; // "" for remove category
+                const categoryDisplaySpan = row.querySelector('.current-category');
+
+                if (!wrongAnswerId || !categoryDisplaySpan) return;
+
+                try {
+                     const response = await fetch(`/api/wrong_answer/${wrongAnswerId}/set_category`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            ...(csrfToken && {'X-CSRFToken': csrfToken}) // Add CSRF token header if needed
+                        },
+                        body: JSON.stringify({ category: selectedCategory === "" ? null : selectedCategory }) // Send null if removing
+                    });
+
+                     if (!response.ok) {
+                        throw new Error(`Server error: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        // Update UI
+                        categoryDisplaySpan.textContent = data.category || '未分类';
+                        console.log(`Category set for ${wrongAnswerId} to ${data.category}`);
+                    } else {
+                         console.error("Failed to set category:", data.error);
+                        alert(`操作失败: ${data.error || '未知错误'}`);
+                    }
+
+                } catch (error) {
+                    console.error('Error setting category:', error);
+                    alert(`网络或脚本错误: ${error.message}`);
+                }
+            }
+        });
+    }
+});
+</script>
 {% endblock %}

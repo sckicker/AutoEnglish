@@ -1,60 +1,71 @@
+{# app/templates/lesson_text.html - Displays Lesson Text #}
 {% extends "base.html" %}
 
-{% block title %}查看课程{% endblock %}
+{% block title %}Lesson {{ lesson.lesson_number }} - NCE 学习平台{% endblock %}
 
 {% block content %}
-<div class="admin-layout">
-    {% include 'admin/sidebar.html' %}
-    <div class="admin-content">
-        <h2>查看课程</h2>
-        <p>这里将显示课程列表，你可以进行查看、编辑或删除等操作。</p>
+<div class="container mt-4 mb-5">
+
+    {# --- Lesson Header --- #}
+    <div class="text-center mb-4 pb-3 border-bottom">
+        <h1 class="display-5">Lesson {{ lesson.lesson_number }}</h1>
+        {# You might have a title field in your Lesson model #}
+        {# {% if lesson.title %}<p class="lead text-muted">{{ lesson.title }}</p>{% endif %} #}
+    </div>
+
+    {# --- Lesson Text Content --- #}
+    <div class="lesson-content bg-light p-4 rounded shadow-sm mb-4">
+        {# Check if lesson text exists #}
+        {% if lesson.text %}
+            {# Preserve line breaks and formatting from the database text #}
+            {# Using <pre> tag or replacing newlines with <br> are options #}
+            {# Option 1: Using <pre> - simplest if text formatting is suitable #}
+            {# <pre style="white-space: pre-wrap; word-wrap: break-word; font-size: 1.1rem;">{{ lesson.text }}</pre> #}
+
+            {# Option 2: Replacing newlines with <br> - better control with CSS #}
+            {% set paragraphs = lesson.text.split('\n') %}
+            {% for paragraph in paragraphs %}
+                {% if paragraph.strip() %} {# Avoid creating empty paragraphs #}
+                    <p>{{ paragraph }}</p>
+                {% endif %}
+            {% endfor %}
+        {% else %}
+            <div class="alert alert-warning" role="alert">
+                未能加载本课课文内容。请检查数据是否已导入。
+                (Could not load the text content for this lesson. Please check if data has been imported.)
+            </div>
+        {% endif %}
+    </div>
+
+    {# --- Action Buttons --- #}
+    <div class="mt-4 pt-4 border-top">
+        <div class="d-flex justify-content-between align-items-center"> {# Use flexbox for alignment #}
+            {# --- Button to go back to the list of all lessons --- #}
+            <a href="{{ url_for('view_lessons') }}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left-circle"></i> 返回课程列表
+            </a>
+
+            {# --- Button to quiz this specific lesson (links to index with parameter) --- #}
+            <a href="{{ url_for('index', quiz_lesson=lesson.lesson_number) }}#quiz-options-section" class="btn btn-success">
+                <i class="bi bi-patch-question"></i> 测试本课词汇 (Quiz this Lesson)
+            </a>
         </div>
-</div>
+    </div>
+
+</div> {# End container #}
 {% endblock %}
 
+{# Optional: Add specific styles for lesson text if needed #}
 {% block styles_extra %}
 <style>
-    .admin-layout {
-        display: flex;
-        min-height: 500px;
+    .lesson-content p {
+        line-height: 1.7; /* Improve readability */
+        margin-bottom: 1rem;
     }
-
-    .admin-sidebar {
-        width: 200px;
-        background-color: #f8f9fa;
-        padding: 20px;
-        border-right: 1px solid #eee;
-    }
-
-    .admin-sidebar h3 {
-        margin-top: 0;
-        margin-bottom: 15px;
-    }
-
-    .admin-sidebar ul {
-        list-style: none;
-        padding: 0;
-    }
-
-    .admin-sidebar li {
-        margin-bottom: 10px;
-    }
-
-    .admin-sidebar a {
-        text-decoration: none;
-        color: #333;
-        display: block;
-        padding: 8px 10px;
-        border-radius: 4px;
-    }
-
-    .admin-sidebar a:hover {
-        background-color: #e9ecef;
-    }
-
-    .admin-content {
-        flex-grow: 1;
-        padding: 20px;
-    }
+    /* Add more specific styles as needed */
 </style>
+{% endblock %}
+
+{# No extra scripts needed for this basic page functionality #}
+{% block scripts_extra %}
 {% endblock %}
