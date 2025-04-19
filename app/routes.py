@@ -3,7 +3,6 @@
 import os
 import random
 from datetime import datetime
-
 from flask import (current_app, render_template, request, jsonify, Blueprint,
                    redirect, url_for, session, flash, abort)
 from flask_login import current_user, login_user, logout_user, login_required
@@ -18,6 +17,19 @@ from .decorators import admin_required, root_admin_required # 导入装饰器
 from flask import abort # 导入 abort
 from flask import jsonify, request # Ensure jsonify and request are imported
 from .models import WrongAnswer, Vocabulary # Ensure WrongAnswer is imported
+
+from flask import send_from_directory, jsonify, abort, current_app, url_for # 修改导入，增加 send_from_directory
+from .models import Lesson, Vocabulary # 导入数据库模型
+from flask import jsonify, current_app, flash, redirect, url_for, send_from_directory # 导入 send_from_directory
+from flask_login import login_required, current_user
+from .models import Lesson # 只需要 Lesson 模型
+# --- 修改导入 ---
+from .tts_utils import generate_and_save_audio_if_not_exists, get_audio_filename
+# ----------------
+from .decorators import admin_required
+from flask import send_from_directory
+import os
+from .tts_utils import get_audio_filename # 导入辅助函数
 
 # --- 主要应用路由 ---
 
@@ -39,6 +51,50 @@ def index():
     now = datetime.utcnow()
     # current_user 由 Flask-Login 提供，可以在模板中直接使用
     return render_template('index.html', lessons=lesson_numbers, current_time=now)
+
+@current_app.route('/audio/<path:filename>')
+@login_required # 或者根据需要开放权限
+def serve_audio(filename):
+    # 从配置获取基础缓存目录名
+    cache_dir_base = current_app.config.get('TTS_AUDIO_CACHE_DIR', 'tts_cache')
+    cache_dir = os.path.join(current_app.instance_path, cache_dir_base)
+    current_app.logger.debug(f"Attempting to serve audio from: {cache_dir}, filename: {filename}")
+    try:
+        # 使用 send_from_directory 安全地提供文件
+        return send_from_directory(cache_dir, filename, as_attachment=False) # as_attachment=False 让浏览器直接播放
+    except FileNotFoundError:
+        current_app.logger.error(f"Audio file not found: {os.path.join(cache_dir, filename)}")
+        abort(404)
+    except Exception as e:
+         current_app.logger.error(f"Error serving audio file {filename}: {e}", exc_info=True)
+         abort(500)
+
+@current_app.route('/lesson/<int:lesson_number>')
+def view_lesson(lesson_number):
+    """显示指定 Lesson 的课文内容和预生成的音频（如果存在）"""
+    current_app.logger.info(f"Request received for lesson {lesson_number}")
+    try:
+        lesson_data = Lesson.query.filter_by(lesson_number=lesson_number).first_or_404()
+    except Exception as e:
+         current_app.logger.error(f"Error fetching lesson {lesson_number} from DB: {e}", exc_info=True)
+         abort(500)
+
+    audio_url = None
+    # --- 检查预生成的音频文件是否存在 ---
+    expected_audio_path = get_audio_filename(lesson_number) # 获取预期绝对路径
+    if expected_audio_path and os.path.exists(expected_audio_path):
+        audio_filename = os.path.basename(expected_audio_path)
+        # 使用新的 serve_audio 路由生成 URL
+        audio_url = url_for('serve_audio', filename=audio_filename)
+        current_app.logger.debug(f"Found pre-generated audio for lesson {lesson_number}. URL: {audio_url}")
+    else:
+        current_app.logger.info(f"Pre-generated audio not found for lesson {lesson_number} at {expected_audio_path}")
+
+    now = datetime.utcnow() # 如果用了 context processor 就不用传了
+    return render_template('lesson_text.html',
+                           lesson=lesson_data,
+                           audio_url=audio_url, # 传递 URL 或 None
+                           current_time=now)
 
 @current_app.route('/lessons', endpoint='view_lessons') # 指定 endpoint 为 view_lessons
 def view_lessons():
@@ -63,19 +119,62 @@ def view_lessons():
 
     return render_template('lessons_list.html', title='课程列表 (Lesson List)', lessons=lessons_data)
 
-@current_app.route('/lesson/<int:lesson_number>')
-def view_lesson(lesson_number):
-    """显示指定 Lesson 的课文内容"""
-    current_app.logger.info(f"Request received for lesson {lesson_number}")
-    try:
-        # 使用 first_or_404 获取课文，如果找不到会直接返回 404 页面
-        lesson_data = Lesson.query.filter_by(lesson_number=lesson_number, source_book=2).first_or_404()
-    except Exception as e:
-         current_app.logger.error(f"Error fetching lesson {lesson_number} from DB: {e}", exc_info=True)
-         abort(500) # 数据库错误返回 500
 
-    now = datetime.utcnow()
-    return render_template('lesson_text.html', lesson=lesson_data, current_time=now)
+# --- TTS API 路由 ---
+@current_app.route('/api/speak/lesson/<int:lesson_number>')
+@login_required # 或者移除，如果允许未登录用户听
+def speak_lesson_text(lesson_number):
+    """API endpoint to generate (if needed) and serve TTS audio for a lesson."""
+    log = current_app.logger
+    log.info(f"Request received for TTS audio for lesson {lesson_number}")
+
+    # 1. Get Lesson Text from Database
+    lesson = Lesson.query.filter_by(lesson_number=lesson_number).first()
+    if not lesson or not lesson.text_en:
+        log.warning(f"Lesson {lesson_number} not found or has no English text.")
+        return jsonify({"error": "Lesson text not found."}), 404
+
+    # 2. Determine Target Filename (using helper)
+    audio_filepath = get_audio_filename(lesson_number)
+    if not audio_filepath:
+        # get_audio_filename 内部会记录错误
+        return jsonify({"error": "Could not determine audio file path configuration."}), 500
+
+    log.debug(f"Request for lesson {lesson_number} audio. Checking path: {audio_filepath}")
+
+    # --- 移除对 get_tts_instance() 的调用 ---
+    # if get_tts_instance() is None: # <--- 删除或注释掉这一行
+    #    log.error("TTS instance is not available.") # <--- 删除或注释掉这一行
+    #    return jsonify({"error": "TTS service is not available."}), 503 # Service Unavailable # <--- 删除或注释掉这一行
+    # --------------------------------------
+
+    # 3. Generate Audio *Only If It Doesn't Exist* using the new function
+    # The function now handles initialization internally if needed.
+    # Pass the actual text to the function.
+    language_code = 'en' # Assuming English text
+    generated_path = generate_and_save_audio_if_not_exists(
+        lesson_number=lesson_number,
+        text=lesson.text_en,
+        language=language_code
+    )
+
+    # 4. Check if generation succeeded (or file already existed)
+    # generate_and_save_audio_if_not_exists returns None on failure
+    if not generated_path:
+         log.error(f"Failed to generate or find audio file for lesson {lesson_number} at {audio_filepath}")
+         return jsonify({"error": "Failed to generate or retrieve audio."}), 500 # Internal Server Error
+
+    # 5. Serve the File using send_from_directory
+    log.info(f"Serving audio file: {generated_path}")
+    try:
+        # send_from_directory 需要目录路径和文件名
+        directory = os.path.dirname(generated_path)
+        filename = os.path.basename(generated_path)
+        log.debug(f"Serving from directory: {directory}, filename: {filename}")
+        return send_from_directory(directory, filename, mimetype='audio/wav')
+    except Exception as e:
+         log.error(f"Error sending file {generated_path}: {e}", exc_info=True)
+         return jsonify({"error": "Could not send audio file."}), 500
 
 # --- API 路由 ---
 
@@ -484,37 +583,185 @@ def toggle_admin_status(user_id):
 
     return redirect(url_for('manage_users')) # 重定向回用户列表
 
-# PDF 处理路由保留，但强烈建议加上权限检查
-# PDF 处理路由
-@current_app.route('/admin/process_pdf', methods=['POST'], endpoint='process_pdf_route_admin') # Added endpoint
-@login_required # Add login required
-@admin_required # Add admin required
-def process_pdf_route_admin(): # Renamed, added checks via decorators
-    # Decorators handle the permission checks now
-    # if not session.get('is_admin'): ... removed ...
-    # --- Call the actual PDF processing logic ---
+# --- PDF 处理路由 (完整实现) ---
+@current_app.route('/admin/process_pdf', methods=['POST'], endpoint='process_pdf_route_admin')
+@login_required # 必须登录
+@admin_required # 必须是管理员
+def process_pdf_route_admin():
+    """处理上传的 NCE PDF 文件，提取数据并强制更新或添加到数据库。"""
+
+    log = current_app.logger # 使用 Flask 的 logger
+
     try:
-        pdf_path = current_app.config.get('NCE_PDF_PATH') # Get path from config
+        # 1. 获取并检查 PDF 文件路径
+        pdf_path = current_app.config.get('NCE_PDF_PATH')
         if not pdf_path or not os.path.exists(pdf_path):
-             current_app.logger.error(f"NCE_PDF_PATH '{pdf_path}' not configured or file not found.")
-             return jsonify({"error": "PDF file path not configured or file not found."}), 500
+             log.error(f"PDF Processing Error: NCE_PDF_PATH '{pdf_path}' not configured or file not found.")
+             return jsonify({"error": "PDF 文件路径未配置或文件不存在。(PDF file path not configured or file not found.)"}), 500 # 返回 500 更合适
 
-        current_app.logger.info(f"Admin {current_user.username} initiated PDF processing.")
-        # Call your processing function
-        results = process_nce_pdf(pdf_path) # Assuming this returns a dict with summaries
+        log.info(f"Admin '{current_user.username}' initiated PDF processing for: {pdf_path}")
 
-        current_app.logger.info(f"PDF processing completed. Results: {results}")
-        # Return the results dictionary directly as JSON
+        # 2. 调用 PDF 解析器
+        extracted_data = process_nce_pdf(pdf_path)
+        lessons_data = extracted_data.get('lessons', [])
+        vocabulary_data = extracted_data.get('vocabulary', [])
+        log.debug(f"PDF parser returned {len(lessons_data)} lessons and {len(vocabulary_data)} vocab items.")
+
+        # 如果解析器未返回任何数据，也提前告知
+        if not lessons_data and not vocabulary_data:
+            log.warning("PDF parser did not extract any lesson or vocabulary data.")
+            return jsonify({
+                "message": "PDF processed, but no lesson or vocabulary data was extracted.",
+                "lesson_summary": {"added": 0, "updated": 0, "errors": 0},
+                "vocabulary_summary": {"added": 0, "updated": 0, "skipped": 0, "errors": 0}
+            }), 200 # 算处理成功，但内容为空
+
+        # 3. 初始化操作总结计数器
+        summary = {
+            "lessons_added": 0, "lessons_updated": 0, "lesson_errors": 0, # 添加错误计数
+            "vocab_added": 0, "vocab_updated": 0, "vocab_skipped": 0, "vocab_errors": 0 # 添加错误和跳过计数
+        }
+
+        # 4. 处理课程数据 (添加或更新)
+        log.info(f"Starting database update for {len(lessons_data)} lessons...")
+        for lesson_info in lessons_data:
+            try:
+                lesson_num = lesson_info.get('lesson_number')
+                if not lesson_num:
+                    log.warning(f"Skipping lesson data with missing lesson number: {lesson_info}")
+                    summary["lesson_errors"] += 1
+                    continue
+
+                # 查找数据库中是否已存在该课程
+                existing_lesson = Lesson.query.filter_by(lesson_number=lesson_num).first()
+
+                if existing_lesson:
+                    # --- 更新现有课程 ---
+                    log.debug(f"Updating existing Lesson {lesson_num} (ID: {existing_lesson.id})")
+                    # 使用 get 获取新值，如果新值为 None 则保留旧值 (更安全)
+                    existing_lesson.title_en = lesson_info.get('title_en', existing_lesson.title_en)
+                    existing_lesson.title_cn = lesson_info.get('title_cn', existing_lesson.title_cn)
+                    existing_lesson.text_en = lesson_info.get('text_en', existing_lesson.text_en)
+                    existing_lesson.text_cn = lesson_info.get('text_cn', existing_lesson.text_cn)
+                    # 假设 source_book 不变
+                    db.session.add(existing_lesson) # 标记为更新
+                    summary["lessons_updated"] += 1
+                    # -------------------
+                else:
+                    # --- 添加新课程 ---
+                    log.debug(f"Adding new Lesson {lesson_num}")
+                    new_lesson = Lesson(
+                        lesson_number=lesson_num,
+                        title_en=lesson_info.get('title_en', ''), # 确保有默认值
+                        title_cn=lesson_info.get('title_cn', ''),
+                        text_en=lesson_info.get('text_en', ''),
+                        text_cn=lesson_info.get('text_cn', ''),
+                        source_book=2 # 假设是 Book 2
+                    )
+                    db.session.add(new_lesson)
+                    summary["lessons_added"] += 1
+                    # -------------------
+            except Exception as lesson_ex:
+                log.error(f"Error processing lesson {lesson_info.get('lesson_number', 'N/A')}: {lesson_ex}", exc_info=True)
+                summary["lesson_errors"] += 1
+                db.session.rollback() # 回滚当前 lesson 的操作，尝试继续下一个
+                # 可以考虑添加一个机制来跳过后续处理，或者让外层 except 捕获
+
+        # 5. 处理词汇数据 (添加或更新)
+        log.info(f"Starting database update for {len(vocabulary_data)} vocabulary items...")
+        # 5. 处理词汇数据 (添加或更新)
+        log.info(f"Starting database update for {len(vocabulary_data)} vocabulary items...")
+        for vocab_info in vocabulary_data:
+            try:
+                lesson_num = vocab_info.get('lesson')
+                eng_word = vocab_info.get('english')
+
+                if not lesson_num or not eng_word or not vocab_info.get('chinese'):
+                    log.warning(
+                        f"Skipping vocab data with missing required fields (lesson, english, chinese): {vocab_info}")
+                    summary["vocab_skipped"] += 1
+                    continue
+
+                from sqlalchemy import func
+                existing_vocab = Vocabulary.query.filter(
+                    Vocabulary.lesson_number == lesson_num,
+                    func.lower(Vocabulary.english_word) == eng_word.lower()
+                ).first()
+
+                if existing_vocab:
+                    # --- 更新现有词汇 ---
+                    log.debug(f"Updating existing Vocab: L{lesson_num} - '{eng_word}' (ID: {existing_vocab.id})")
+                    chn_trans = vocab_info.get('chinese', existing_vocab.chinese_translation)
+                    pos = vocab_info.get('part_of_speech', existing_vocab.part_of_speech)
+                    existing_vocab.chinese_translation = chn_trans
+                    existing_vocab.part_of_speech = pos or ''
+                    # --- 确保 source_book 也有值（如果允许更新的话，虽然通常不需要）---
+                    # existing_vocab.source_book = existing_vocab.source_book or 2 # 确保不为空
+                    db.session.add(existing_vocab)
+                    summary["vocab_updated"] += 1
+                    # --------------------
+                else:
+                    # --- 添加新词汇 ---
+                    log.debug(f"Adding new Vocab: L{lesson_num} - '{eng_word}'")
+                    new_vocab = Vocabulary(
+                        lesson_number=lesson_num,
+                        english_word=eng_word,
+                        chinese_translation=vocab_info.get('chinese', ''),
+                        part_of_speech=vocab_info.get('part_of_speech', ''),
+                        # ===> 添加这一行来设置 source_book <===
+                        source_book=2  # 假设 NCE Book 2 对应的值是 2
+                        # =====================================
+                    )
+                    db.session.add(new_vocab)
+                    summary["vocab_added"] += 1
+                    # -------------------
+            except Exception as vocab_ex:
+                log.error(
+                    f"Error processing vocab item '{vocab_info.get('english', 'N/A')}' for lesson {vocab_info.get('lesson', 'N/A')}: {vocab_ex}",
+                    exc_info=True)
+                summary["vocab_errors"] += 1
+            except Exception as vocab_ex:
+                log.error(f"Error processing vocab item '{vocab_info.get('english', 'N/A')}' for lesson {vocab_info.get('lesson', 'N/A')}: {vocab_ex}", exc_info=True)
+                summary["vocab_errors"] += 1
+                db.session.rollback() # 回滚当前词汇的操作，尝试继续下一个
+
+        # 6. 提交所有数据库更改
+        try:
+            db.session.commit()
+            log.info(f"Database commit successful. Final summary: {summary}")
+        except Exception as commit_ex:
+            db.session.rollback() # 最终提交失败也要回滚
+            log.error(f"Fatal error during final database commit: {commit_ex}", exc_info=True)
+            # 返回一个明确的数据库提交错误
+            return jsonify({
+                "error": f"数据库提交时发生严重错误。(Database commit failed: {str(commit_ex)})",
+                "lesson_summary": summary, # 仍然返回处理过程中的统计
+                "vocabulary_summary": summary
+                }), 500
+
+        # 7. 返回成功响应和操作总结
         return jsonify({
-            "message": "PDF processed successfully.",
-            "vocabulary_summary": results.get('vocabulary_summary', {}),
-            "lesson_text_summary": results.get('lesson_text_summary', {})
+            "message": "PDF 处理完成，数据库已更新。(PDF processed and database updated.)",
+            # 构造与前端 JS 期望一致的 summary 结构
+            "lesson_summary": {
+                "added": summary["lessons_added"],
+                "updated": summary["lessons_updated"],
+                "errors": summary["lesson_errors"]
+            },
+            "vocabulary_summary": {
+                "added": summary["vocab_added"],
+                "updated": summary["vocab_updated"],
+                "skipped": summary["vocab_skipped"],
+                "errors": summary["vocab_errors"]
+            }
         }), 200
 
     except Exception as e:
-        current_app.logger.error(f"Error during PDF processing initiated by {current_user.username}: {e}", exc_info=True)
-        db.session.rollback() # Rollback any partial DB changes if error occurred mid-process
-        return jsonify({"error": f"An internal server error occurred during PDF processing: {str(e)}"}), 500
+        # 捕获 PDF 解析或其他意外错误
+        # db.session.rollback() # 如果在 try 块开始前没有启动事务，这里可能不需要回滚
+        log.error(f"Unhandled error during PDF processing for user '{current_user.username}': {e}", exc_info=True)
+        # 返回通用服务器错误
+        return jsonify({"error": f"处理 PDF 时发生内部服务器错误。(An internal server error occurred during PDF processing: {str(e)})"}), 500
 
 # --- Updated Vocabulary Management Route ---
 @current_app.route('/admin/vocabulary', endpoint='manage_vocabulary')

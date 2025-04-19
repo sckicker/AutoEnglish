@@ -85,24 +85,32 @@ class WrongAnswer(db.Model):
 
 # --- 你还需要确保 Vocabulary 模型中定义了对应的 back_populates ---
 class Vocabulary(db.Model):
-    __tablename__ = 'vocabulary' # 明确表名
+    __tablename__ = 'vocabulary'
     id = db.Column(db.Integer, primary_key=True)
     lesson_number = db.Column(db.Integer, nullable=False, index=True)
     english_word = db.Column(db.String(128), nullable=False, index=True)
-    part_of_speech = db.Column(db.String(32))
-    chinese_translation = db.Column(db.String(256))
-    # ... 其他字段 ...
+    part_of_speech = db.Column(db.String(32), nullable=True) # 允许词性为空
+    chinese_translation = db.Column(db.String(256), nullable=True) # 允许中文翻译为空
 
-    # --- 关系定义：指向 WrongAnswer ---
+    # ===> 添加 source_book 字段定义 <===
+    # 类型通常是 Integer，假设你用数字代表书本
+    # nullable=False 强制要求必须有值
+    # default=2 如果大部分来自第二册，设置默认值可以简化添加逻辑
+    # index=True 如果你经常按书本筛选词汇，可以加索引
+    source_book = db.Column(db.Integer, nullable=False, default=2, index=True)
+    # ==================================
+
+    # --- 关系定义 (如果需要) ---
     wrong_answer_associations = db.relationship(
         'WrongAnswer',
-        back_populates='vocabulary_item', # 指向 WrongAnswer.vocabulary_item
+        back_populates='vocabulary_item',
         lazy='dynamic',
-        cascade='all, delete-orphan' # 如果删除词汇，关联的错题记录也删除
+        cascade='all, delete-orphan'
     )
+    # -------------------------
 
     def __repr__(self):
-        return f'<Vocabulary {self.lesson_number} - {self.english_word}>'
+        return f'<Vocabulary L{self.lesson_number} Book{self.source_book}: {self.english_word}>' # 在 repr 中也加上
 
 # --- 同样，QuizAttempt 模型也需要 back_populates ---
 class QuizAttempt(db.Model):

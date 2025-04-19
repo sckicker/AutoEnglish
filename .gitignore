@@ -82,8 +82,8 @@ Desktop.ini
 # yarn-debug.log
 
 # --- Other ---
-# Upload folder (if storing uploads within the project structure)
-# uploads/ # Uncomment if you have an 'uploads' folder to ignore
+# Upload folder (if storing data within the project structure)
+# data/ # Uncomment if you have an 'data' folder to ignore
 
 # If you generate static files via a build process, ignore the output dir
 # static/dist/ # Example

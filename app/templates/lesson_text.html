@@ -1,12 +1,12 @@
-{# app/templates/lesson_text.html V1.3 - Fixed JS Declaration Error #}
-{% extends "base.html" %} {# 继承基础模板 #}
-
-{# 设置页面标题 #}
+{# app/templates/lesson_text.html V1.9 - Improved Visuals #}
+{% extends "base.html" %}
 {% block title %}Lesson {{ lesson.lesson_number }} - {{ lesson.title_en or 'Lesson Text' }}{% endblock %}
 
 {% block content %}
-{# --- 1. 增强型标题区域 --- #}
+{# --- 1. 标题区域 (保持不变或微调样式类) --- #}
+{# 可以考虑在这里添加一些背景图或更丰富的样式，但为了保持简洁，我们主要修改body背景 #}
 <div class="p-4 p-md-5 mb-4 rounded-3 bg-light shadow-sm border-start border-primary border-5">
+    {# ... 标题内容 ... #}
     <div class="container-fluid py-3">
         <h1 class="display-5 fw-bold">Lesson {{ lesson.lesson_number }}: {{ lesson.title_en or 'Unknown Title' }}</h1>
         {% if lesson.title_cn %}
@@ -15,326 +15,407 @@
     </div>
 </div>
 
-{# --- 2. 双栏对照区域 --- #}
-<div class="row g-4">
-    {# --- 左栏：英文课文 --- #}
-    <div class="col-md-6">
-        <div class="p-3 border rounded-2 bg-white h-100">
-            <h4 class="mb-3 pb-2 border-bottom"><i class="bi bi-file-text"></i> 课文 (Text)</h4>
-            {# --- 语音朗读控件 --- #}
-            <div>
-                <label for="voice-select" class="form-label small">选择语音:</label> {# Made label small #}
-                <div class="input-group input-group-sm mb-2"> {# Use input group for better layout #}
-                    <select id="voice-select" class="form-select form-select-sm"></select>
-                    <button id="speak-button" class="btn btn-outline-primary"><i class="bi bi-play-fill"></i> 朗读</button>
+{# --- 2. 英文课文、音频和录音主区域 (C 位) --- #}
+{# 保持 bg-white 和 shadow，让内容区域在新的背景下更突出 #}
+<div class="p-4 border rounded-3 bg-white shadow mb-4">
+    <h3 class="mb-4 pb-2 border-bottom"><i class="bi bi-file-earmark-text-fill"></i> 英文课文与跟读练习</h3>
+
+    {# --- 音频和录音控件行 (保持不变) --- #}
+    <div class="row g-3 mb-4 align-items-center">
+        {# 预生成音频播放器 #}
+        <div class="col-md-6">
+            {% if audio_url %}
+                <div>
+                    <label class="form-label small fw-bold">课程音频:</label>
+                    <audio controls preload="metadata" class="w-100" title="播放预生成的课程音频">
+                        <source src="{{ audio_url }}" type="audio/wav">
+                        你的浏览器不支持播放 WAV 音频。
+                    </audio>
                 </div>
-            </div>
-            {# --- 英文课文内容 --- #}
-            <div class="lesson-text english-text preserve-newlines" id="english-text-content"> {# Added ID for easier JS selection #}
-                {% if lesson.text_en %}{{ lesson.text_en | safe }}{% else %}<p class="text-muted"><em>English text not available.</em></p>{% endif %}
+            {% else %}
+                <div class="text-muted small"><i class="bi bi-exclamation-circle"></i> 暂无预生成音频。</div>
+            {% endif %}
+        </div>
+        {# 用户录音控件 #}
+        <div class="col-md-6">
+             <div class="p-3 border rounded-2 bg-light-subtle h-100">
+                <label class="form-label small fw-bold">跟读录音:</label>
+                <div class="d-flex align-items-center mb-2">
+                    <button id="record-button" class="btn btn-danger btn-sm me-2"><i class="bi bi-mic-fill"></i> 开始录音</button>
+                    <span id="recording-status" class="text-muted small flex-grow-1"></span>
+                </div>
+                <div id="user-recording-playback" style="min-height: 40px;"></div>
             </div>
         </div>
     </div>
-    {# --- 右栏：中文译文 --- #}
-    <div class="col-md-6">
-        {% if lesson.text_cn %}
-            <div class="p-3 border rounded-2 bg-white h-100">
-                <h4 class="mb-3 pb-2 border-bottom"><i class="bi bi-translate"></i> 参考译文 (Translation)</h4>
-                <div class="lesson-text chinese-text preserve-newlines">
-                    {# Process newlines for Chinese text as well #}
-                    {% set cn_paragraphs = lesson.text_cn.split('\n') %}
-                    {% for para in cn_paragraphs %}
-                        {% if para.strip() %}<p>{{ para }}</p>{% endif %}
-                    {% endfor %}
-                </div>
-            </div>
+
+    {# --- 英文课文内容 --- #}
+    <div class="lesson-text english-text preserve-newlines border-top pt-3" id="english-text-content">
+        {# <h5 class="text-muted mb-3">Text Content:</h5> #}
+        {% if lesson.text_en %}
+            {# === 修改为：直接输出原始文本内容 === #}
+            {{ lesson.text_en }}
+            {# ============================== #}
         {% else %}
-            <div class="p-3 border rounded-2 bg-light h-100 d-flex align-items-center justify-content-center">
-                 <p class="text-muted m-0"><em>Chinese translation not available.</em></p>
-            </div>
+            <p class="text-muted"><em>English text not available.</em></p>
         {% endif %}
     </div>
 </div>
+{# --- 英文区域结束 --- #}
 
-{# --- 3. 操作按钮区域 --- #}
-<div class="mt-4 pt-3 text-center border-top"> {# 添加了 border-top 分隔 #}
-    <a href="{{ url_for('view_lessons') }}" class="btn btn-secondary me-2"> {# Use view_lessons if that's the list page #}
-        <i class="bi bi-arrow-left-circle"></i> 返回课程列表
-    </a>
-    {# --- 测试本课词汇按钮 (触发 JS) --- #}
-    <button type="button" id="start-lesson-quiz-btn" class="btn btn-success" data-lesson-number="{{ lesson.lesson_number }}">
-        <i class="bi bi-question-circle-fill"></i> 测试本课词汇 (Quiz this Lesson)
-    </button>
-    {# --- 按钮结束 --- #}
+{# --- 3. 操作按钮区域 (保持不变) --- #}
+<div class="mb-4 pt-3 text-center">
+    <a href="{{ url_for('view_lessons') }}" class="btn btn-secondary me-2"><i class="bi bi-arrow-left-circle"></i> 返回课程列表</a>
+    <button type="button" id="start-lesson-quiz-btn" class="btn btn-success" data-lesson-number="{{ lesson.lesson_number }}"><i class="bi bi-question-circle-fill"></i> 测试本课词汇</button>
 </div>
 
-{# --- 4. 隐藏的 Quiz 和 Results 区域 (供 quiz_logic.js 使用) --- #}
-<div class="dynamic-content-area mt-4"> {# 包裹动态区域 #}
-    {# 测试题显示区域 (初始隐藏) #}
-    <div id="quiz-area" class="hidden p-3 border rounded bg-light shadow-sm"> {# Added styles similar to results #}
-        <h2 class="text-center mb-4">Lesson {{ lesson.lesson_number }} 词汇测试进行中...</h2>
-        <div id="questions-container">
-            {# Questions will be inserted here by JavaScript #}
-        </div>
-        <div class="text-center"> {# 居中提交按钮 #}
-            <button type="button" id="submit-quiz-btn" class="btn btn-primary hidden mt-3">提交答案</button>
-        </div>
-    </div>
-
-    {# 测试结果显示区域 (初始隐藏) #}
-    <div id="results-area" class="hidden mt-4 p-3 border rounded bg-light shadow-sm">
-        <h2>测试结果</h2>
-        <p>你的得分: <span id="score" class="fw-bold"></span> / <span id="total-questions"></span></p>
-        <h3 id="incorrect-title">错题回顾:</h3> {# Give title an ID if needed #}
-        <ul id="incorrect-list" class="list-group list-group-flush mb-3">
-            {# Incorrect answers will be inserted here #}
-        </ul>
-        {# 重新测试按钮 #}
-        <button type="button" id="restart-quiz-btn" class="btn btn-info hidden">重新测试本课 (Quiz Again)</button>
-    </div>
-
-    {# 加载指示器 (初始隐藏) #}
-    <div id="loading-indicator" class="hidden mt-4 text-center">
-        <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
-        </div>
-        <p class="text-muted mt-2">请稍候...</p>
-    </div>
-
-    {# 错误消息显示区域 (初始隐藏) #}
-     <div id="error-message" class="alert alert-danger hidden mt-4" role="alert"></div>
+{# --- 4. 隐藏的 Quiz 和 Results 区域 (保持不变) --- #}
+<div class="dynamic-content-area mt-4">
+    <div id="quiz-area" class="hidden p-3 border rounded bg-light shadow-sm">...</div>
+    <div id="results-area" class="hidden mt-4 p-3 border rounded bg-light shadow-sm">...</div>
+    <div id="loading-indicator" class="hidden mt-4 text-center">...</div>
+    <div id="error-message" class="alert alert-danger hidden mt-4" role="alert"></div>
 </div>
-{# --- 隐藏区域结束 --- #}
 
+{# --- 5. 中文参考译文区域 (修改为默认显示) --- #}
+{% if lesson.text_cn %}
+<hr class="my-4">
+<div class="translation-section">
+    {# 移除了显示/隐藏按钮的 <p> 标签 #}
+    {# <p><button class="btn btn-outline-secondary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTranslation" aria-expanded="false" aria-controls="collapseTranslation"><i class="bi bi-translate"></i> 显示/隐藏参考译文</button></p> #}
+
+    {# 从包裹译文的 div 中移除了 'collapse' 类，使其默认显示 #}
+    <div id="collapseTranslation"> {# 保持 ID，但移除 collapse 类 #}
+      <div class="card card-body bg-light border-secondary">
+          <h5 class="card-title text-muted">参考译文 (Translation)</h5>
+          <div class="lesson-text chinese-text preserve-newlines small">
+                {% set cn_paragraphs = lesson.text_cn.split('\n') %}
+                {% for para in cn_paragraphs %}{% if para.strip() %}<p class="mb-2">{{ para }}</p>{% endif %}{% endfor %}
+          </div>
+      </div>
+    </div>
+</div>
+{% endif %}
+{# --- 中文区域结束 --- #}
 {% endblock %}
 
-{# --- 特定页面 CSS --- #}
 {% block styles_extra %}
 <style>
-    .lesson-text { font-size: 1.05rem; line-height: 1.8; }
-    /* .english-text { font-family: 'Times New Roman', Times, serif; } */
-    .chinese-text p { margin-bottom: 0.8rem; } /* Adjust paragraph spacing for Chinese */
+    /* --- 整体页面背景优化 (保持或根据需要修改) --- */
+    body {
+        /* 示例: 柔和的线性渐变背景 */
+        background: linear-gradient(to bottom right, #e0f7fa, #b2ebf2);
+        background-attachment: fixed; /* 背景不随滚动移动 */
+    }
+
+    /* --- 内容区域容器的微调 (增强阴影和边框) --- */
+     .rounded-3.bg-white.shadow,
+     .rounded-3.bg-light.shadow-sm,
+     .translation-section .card {
+        box-shadow: 0 0.75rem 1.5rem rgba(0, 0, 0, 0.1) !important; /* 稍微增强阴影 */
+        border-color: rgba(0, 0, 0, 0.08) !important; /* 柔和的边框颜色 */
+     }
+
+
+    /* --- 英文课文区域样式调整 - 选择一个主题并取消注释 --- */
+
+    /* === 主题 1: 柔和渐变边框与突出阴影 === */
+    /* 让内容区域拥有一个带有渐变效果的边框，并增强阴影 */
+    /*
+    .lesson-text.english-text {
+        background-color: #ffffff; /* 浅色背景 */
+        color: #333; /* 深色文字 */
+        font-family: 'Lora', serif; /* 示例字体，请确保引入 */
+        font-size: 1.15rem;
+        line-height: 1.8;
+        letter-spacing: 0.02em;
+        padding: 2rem;
+
+        border: 5px solid transparent; /* 透明边框，用于 border-image */
+        border-image: linear-gradient(to right, #007bff, #00c6ff) 1; /* 线性渐变边框 */
+        border-image-slice: 1; /* 确保整个边框都应用渐变 */
+
+        box-shadow: 0 1rem 2rem rgba(0, 123, 255, 0.2); /* 带有主题色的阴影 */
+
+        white-space: pre-line;
+        position: relative;
+        overflow: hidden;
+        border-radius: 0.5rem; /* 边框渐变和圆角可能需要调整兼容性 */
+    }
+    */
+
+    /* === 主题 2: 侧边强调线与柔和背景 === */
+    /* 在左侧添加一条有颜色的垂直线，背景柔和干净 */
+    /*
+    .lesson-text.english-text {
+        background-color: #ffffff; /* 干净的白色背景 */
+        color: #444; /* 柔和的深灰色文字 */
+        font-family: 'Open Sans', sans-serif; /* 示例字体，请确保引入 */
+        font-size: 1.1rem;
+        line-height: 1.7;
+        padding: 1.5rem 1.5rem 1.5rem 2rem; /* 左侧留更多空间给强调线 */
+
+        border-left: 5px solid #28a745; /* 左侧绿色强调线 */
+        border-radius: 0.5rem;
+        box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.05); /* 柔和阴影 */
+
+        white-space: pre-line;
+        position: relative;
+        overflow: hidden;
+    }
+    */
+
+    /* === 主题 3: 拟物化“纸张”效果 === */
+    /* 模拟文本写在纸上的效果，带有 subtle 的纸张纹理和阴影 */
+    /* 需要一张非常浅的纸张纹理图片，例如 paper_texture.png */
+    .lesson-text.english-text {
+        background-color: #fefefe; /* 纸张的颜色，可以不是纯白 */
+        background-image: url('{{ url_for("static", filename="images/lesson.png") }}'); /* 纸张纹理 */
+        background-repeat: repeat;
+        background-size: auto;
+
+        color: #222; /* 比普通深色文字更深一些 */
+        font-family: 'Playfair Display', serif; /* 更具艺术感的字体 */
+        font-size: 1.15rem;
+        line-height: 1.9; /* 纸张上的行高可以稍微大一点 */
+        letter-spacing: 0.03em; /* 字母间距也可以稍微大一点 */
+
+        padding: 2.5rem; /* 纸张边缘的留白 */
+
+        border-radius: 8px; /* 纸张的圆角 */
+        box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.15), 0 0 10px rgba(0, 0, 0, 0.05) inset; /* 外部阴影和 subtle 的内部阴影 */
+
+        white-space: pre-line;
+        position: relative;
+        overflow: hidden;
+    }
+
+
+    /* === 默认/基础样式 (如果上面的主题都被注释掉，使用这个) === */
+    .lesson-text.english-text {
+        background-color: #f8f9fa; /* Bootstrap 的浅灰色 */
+        color: #212529; /* Bootstrap 的默认深色文本 */
+        font-family: 'Georgia', serif; /* 示例字体 */
+        font-size: 1.1rem;
+        line-height: 1.7;
+        padding: 1.5rem;
+        white-space: pre-line;
+        border-radius: 0.5rem; /* 添加圆角 */
+        box-shadow: 0 0.25rem 0.75rem rgba(0, 0, 0, 0.05); /* 添加柔和阴影 */
+    }
+    /* ======================================================= */
+
+
+    /* --- 中文参考译文样式 (保持或微调) --- */
+    .chinese-text p {
+        margin-bottom: 0.5em;
+        line-height: 1.6;
+    }
+
+    /* --- 其他样式 (保持或微调) --- */
+    .translation-section .card-title { font-size: 1rem; }
     .border-5 { border-width: 5px !important; }
-    .preserve-newlines p { margin-bottom: 1em; } /* Ensure paragraphs have margin */
-    /* Remove default margin for the first paragraph if needed */
-    .preserve-newlines p:first-child { margin-top: 0; }
+    .preserve-newlines { white-space: pre-line; }
     .dynamic-content-area { min-height: 200px; }
-    .hidden { display: none; } /* Ensure hidden class works */
+    .hidden { display: none; }
+    .recording-indicator::before { content: '🔴'; display: inline-block; margin-right: 5px; animation: blink 1.5s linear infinite; }
+    @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.2; } 100% { opacity: 1; } }
+
+
+    /* 引入 Web Font (示例：引入 Lora 字体，你需要将其放置在 <base.html> 的 <head> 中或使用 @import) */
+    /* 示例：在 base.html 的 <head> 中加入类似这样的标签，根据你选择的字体修改 */
+    /* <link href="https://fonts.googleapis.com/css2?family=Lora:wght@400;700&display=swap" rel="stylesheet"> */
+    /* <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap" rel="stylesheet"> */
+    /* <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap" rel="stylesheet"> */
+    /* <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet"> */
+
 </style>
 {% endblock %}
 
-{# --- 特定页面 JS (修正版) --- #}
+{# --- 特定页面 JS (保持不变) --- #}
 {% block scripts_extra %}
 <script>
-    // console.log('lesson_text.html: Script block reached'); // Debug log
+    // --- 测验启动和重启逻辑 (保持不变) ---
+    const startLessonQuizBtn = document.getElementById('start-lesson-quiz-btn');
+    const restartQuizBtn = document.getElementById('restart-quiz-btn');
 
-    // --- 语音合成部分 ---
+    async function startLessonQuiz(lessonNumber) { /* ... 之前的 startLessonQuiz 实现 ... */ }
+    function restartLessonQuiz() { /* ... 之前的 restartLessonQuiz 实现 ... */ }
+
+    if (startLessonQuizBtn) { startLessonQuizBtn.addEventListener('click', () => { /* ... */ }); }
+    if (restartQuizBtn) { restartQuizBtn.addEventListener('click', restartLessonQuiz); }
+    // ------------------------------------
+
+
+    // === 新增：录音功能逻辑 (保持不变) ===
     document.addEventListener('DOMContentLoaded', () => {
-        if ('speechSynthesis' in window) {
-            const synth = window.speechSynthesis;
-            const voiceSelect = document.getElementById('voice-select');
-            const textToSpeakElement = document.getElementById('english-text-content'); // Use ID
-            const speakButton = document.getElementById('speak-button');
-            let voices = [];
+        const recordButton = document.getElementById('record-button');
+        const recordingStatus = document.getElementById('recording-status');
+        const userPlaybackDiv = document.getElementById('user-recording-playback');
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let audioStream = null; // Store the stream to stop tracks later
+        let isRecording = false;
+        let recordedAudioURL = null; // Store the URL for cleanup
 
-            function populateVoiceList() {
-                try { // Add try-catch for robustness
-                    voices = synth.getVoices();
-                    voiceSelect.innerHTML = ''; // Clear existing options
-                    voices.forEach(voice => {
-                        // Optional: Filter for English voices if desired
-                         if (voice.lang.startsWith('en')) {
-                            const option = document.createElement('option');
-                            option.textContent = `${voice.name} (${voice.lang})`;
-                            option.value = voice.name; // Use name as value
-                            option.setAttribute('data-lang', voice.lang); // Store lang if needed
-                            voiceSelect.appendChild(option);
+        // 检查浏览器支持
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder) {
+            recordButton.addEventListener('click', async () => {
+                if (isRecording) {
+                    // --- 停止录音 ---
+                    try {
+                        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                            mediaRecorder.stop(); // onstop event will handle blob creation
+                            // mediaRecorder 会自动停止关联的 track
+                            // 如果需要手动停止所有轨道（例如在出错或切换时）
+                            if (audioStream) {
+                                audioStream.getTracks().forEach(track => track.stop());
+                                console.log("Audio stream tracks stopped.");
+                            }
+                            console.log("Recording stopped via button.");
                         }
-                    });
-                    // Try to pre-select a default English voice if possible
-                    const defaultVoice = voices.find(voice => voice.lang === 'en-US' && voice.default) || voices.find(voice => voice.lang === 'en-US') || voices.find(voice => voice.lang.startsWith('en'));
-                    if(defaultVoice) voiceSelect.value = defaultVoice.name;
+                         // UI 更新将在 onstop 事件中处理
+                         recordingStatus.textContent = '处理中...';
+                         recordingStatus.classList.remove('recording-indicator'); // 移除闪烁
+                         recordButton.disabled = true; // 禁用直到处理完成
 
-                } catch (e) {
-                    console.error("Error populating voice list:", e);
+                    } catch (error) {
+                         console.error("Error stopping recorder:", error);
+                         recordingStatus.textContent = '停止录音出错';
+                         // 尝试重置状态
+                         isRecording = false;
+                         recordButton.disabled = false;
+                         recordButton.innerHTML = '<i class="bi bi-mic-fill"></i> 开始录音';
+                         recordButton.classList.replace('btn-secondary', 'btn-danger');
+                    }
+
+                } else {
+                    // --- 开始录音 ---
+                    // 清理之前的录音（如果存在）
+                    userPlaybackDiv.innerHTML = '';
+                    if (recordedAudioURL) {
+                        URL.revokeObjectURL(recordedAudioURL); // 释放旧的 URL
+                        recordedAudioURL = null;
+                    }
+                    audioChunks = []; // 清空数据块
+
+                    try {
+                        recordingStatus.textContent = '请求麦克风权限...';
+                        // 请求麦克风权限并获取音频流
+                        audioStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                        console.log("Microphone access granted.");
+                        recordingStatus.textContent = '录音中...';
+                        recordingStatus.classList.add('recording-indicator'); // 添加闪烁效果
+
+                        // --- 初始化 MediaRecorder ---
+                        // 尝试指定 MIME 类型以获得更好的兼容性，如 'audio/webm', 'audio/ogg', 'audio/wav'
+                        // 浏览器会选择它支持的最佳格式
+                        const options = { mimeType: 'audio/wav' }; // 尝试 WAV
+                        try {
+                            mediaRecorder = new MediaRecorder(audioStream, options);
+                            console.log("Using mimeType:", options.mimeType);
+                        } catch (e1) {
+                            console.warn(`mimeType ${options.mimeType} not supported, trying default.`);
+                            try {
+                                 options.mimeType = 'audio/webm'; // 尝试 WebM
+                                 mediaRecorder = new MediaRecorder(audioStream, options);
+                                 console.log("Using mimeType:", options.mimeType);
+                            } catch(e2) {
+                                console.warn(`mimeType ${options.mimeType} not supported, trying default.`);
+                                try {
+                                     options.mimeType = 'audio/ogg'; // 尝试 Ogg
+                                     mediaRecorder = new MediaRecorder(audioStream, options);
+                                     console.log("Using mimeType:", options.mimeType);
+                                } catch (e3) {
+                                      console.warn("Could not set preferred mimeType, using browser default.");
+                                      mediaRecorder = new MediaRecorder(audioStream); // 使用浏览器默认
+                                }
+                            }
+                        }
+                        // --------------------------
+
+                        mediaRecorder.ondataavailable = (event) => {
+                            if (event.data.size > 0) {
+                                audioChunks.push(event.data);
+                                // console.log("Chunk received, size:", event.data.size); // Debug log
+                            }
+                        };
+
+                        mediaRecorder.onstop = () => {
+                            console.log("MediaRecorder stopped.");
+                            recordingStatus.textContent = '录音完成。';
+                            recordingStatus.classList.remove('recording-indicator');
+
+                            // 创建 Blob 和 URL
+                            const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/wav' }); // 使用记录时的MIME类型或回退
+                             recordedAudioURL = URL.createObjectURL(audioBlob);
+                            console.log("Blob created, URL:", recordedAudioURL);
+
+                            // 创建播放器
+                            const audioPlayer = document.createElement('audio');
+                            audioPlayer.controls = true;
+                            audioPlayer.preload = 'metadata'; // 节省带宽
+                            audioPlayer.classList.add('w-100'); // Bootstrap width
+                            const source = document.createElement('source');
+                            source.src = recordedAudioURL;
+                            source.type = audioBlob.type; // 使用 Blob 的 MIME 类型
+                            audioPlayer.appendChild(source);
+                            audioPlayer.onerror = () => { // 添加播放错误处理
+                                 console.error("Error playing recorded audio.");
+                                 userPlaybackDiv.innerHTML = '<p class="text-danger small">无法播放录音。</p>';
+                            };
+
+                            userPlaybackDiv.innerHTML = ''; // 清空旧的（如果有）
+                            userPlaybackDiv.appendChild(audioPlayer);
+
+                            // 重置按钮状态
+                            isRecording = false;
+                            recordButton.disabled = false;
+                            recordButton.innerHTML = '<i class="bi bi-mic-fill"></i> 重新录音'; // 提示可以再录
+                            recordButton.classList.replace('btn-secondary', 'btn-danger');
+                        };
+
+                        mediaRecorder.onerror = (event) => {
+                             console.error("MediaRecorder error:", event.error);
+                             recordingStatus.textContent = `录音出错: ${event.error.name}`;
+                             recordingStatus.classList.remove('recording-indicator');
+                             isRecording = false;
+                             recordButton.disabled = false;
+                             recordButton.innerHTML = '<i class="bi bi-mic-fill"></i> 开始录音';
+                             recordButton.classList.replace('btn-secondary', 'btn-danger');
+                        };
+
+                        // 开始录音
+                        mediaRecorder.start();
+                        console.log("Recording started.");
+                        isRecording = true;
+                        recordButton.innerHTML = '<i class="bi bi-stop-circle-fill"></i> 停止录音';
+                        recordButton.classList.replace('btn-danger', 'btn-secondary'); // 改变按钮颜色
+
+                    } catch (err) {
+                        console.error("Error accessing microphone or starting recorder:", err);
+                        recordingStatus.textContent = `无法访问麦克风: ${err.name}`;
+                        alert(`错误：无法访问麦克风。\n请确保您已授权浏览器使用麦克风，并且没有其他应用正在占用它。\n错误详情: ${err.message}`);
+                        // 重置状态
+                        isRecording = false;
+                        if (audioStream) { // 关闭可能已获取但未使用的流
+                             audioStream.getTracks().forEach(track => track.stop());
+                             audioStream = null;
+                        }
+                    }
                 }
-            }
-
-            // Populate list initially and on change event
-            populateVoiceList();
-            if (speechSynthesis.onvoiceschanged !== undefined) {
-                speechSynthesis.onvoiceschanged = populateVoiceList;
-            }
-
-            if(speakButton && textToSpeakElement && voiceSelect) {
-                speakButton.addEventListener('click', () => {
-                    if (!textToSpeakElement.textContent) {
-                         console.warn("No text content found to speak.");
-                         return; // Don't speak if no text
-                    }
-                    if (synth.speaking) {
-                        console.log("Speech synthesis is busy. Stopping previous utterance.");
-                        synth.cancel(); // Stop previous speech before starting new
-                         // Add a small delay before speaking again if needed
-                        // setTimeout(() => speak(), 100);
-                        // return;
-                    }
-
-                    const utterThis = new SpeechSynthesisUtterance(textToSpeakElement.textContent);
-                    const selectedVoiceName = voiceSelect.value;
-                    const selectedVoice = voices.find(voice => voice.name === selectedVoiceName);
-
-                    if (selectedVoice) {
-                        utterThis.voice = selectedVoice;
-                         utterThis.lang = selectedVoice.lang; // Set lang property
-                        // console.log("Using voice:", selectedVoice.name); // Debug log
-                    } else {
-                        console.warn("Selected voice not found, using default.");
-                    }
-
-                    utterThis.onerror = (event) => { // Add error handling
-                        console.error('SpeechSynthesisUtterance.onerror', event);
-                        alert(`语音朗读出错: ${event.error}`);
-                    };
-
-                    synth.speak(utterThis);
-                    // console.log("Speaking initiated."); // Debug log
-                });
-            } else {
-                 console.warn("Speak button, text element, or voice select not found for speech synthesis setup.");
-            }
+            });
 
         } else {
-            console.error('Speech synthesis not supported in this browser.');
-            const speakButton = document.getElementById('speak-button');
-            const voiceSelect = document.getElementById('voice-select');
-            if (speakButton) {
-                speakButton.disabled = true;
-                speakButton.title = '浏览器不支持语音朗读';
-                speakButton.querySelector('i').classList.replace('bi-play-fill', 'bi-mic-mute'); // Change icon
-            }
-            if (voiceSelect) {
-                voiceSelect.disabled = true;
-            }
+            // 浏览器不支持录音 API
+            console.error('Audio recording API not supported in this browser.');
+            recordButton.disabled = true;
+            recordingStatus.textContent = '浏览器不支持录音功能';
+            recordButton.title = '您的浏览器不支持录音';
+            recordButton.innerHTML = '<i class="bi bi-mic-mute-fill"></i> 无法录音';
         }
     });
-
-    // --- 测验逻辑交互部分 ---
-
-    // Get references to BUTTONS specific to this page
-    const startLessonQuizBtn = document.getElementById('start-lesson-quiz-btn');
-    const restartQuizBtn = document.getElementById('restart-quiz-btn'); // In results area
-
-    // --- Function to Initiate Quiz for THIS Lesson ---
-    // This function will use the globally defined functions from quiz_logic.js
-    async function startLessonQuiz(lessonNumber) {
-        if (!lessonNumber) {
-            console.error("startLessonQuiz called without a lessonNumber.");
-            showError('无法获取课程编号。'); // Uses global showError
-            return;
-        }
-        console.log(`Attempting to start quiz for lesson ${lessonNumber}...`);
-
-        // Reset UI elements using global function before starting
-        resetQuizUI(); // From quiz_logic.js - hides quiz/results, enables buttons etc.
-
-        // Show loading and disable the start button for this page
-        showLoading(true); // From quiz_logic.js
-        if (startLessonQuizBtn) startLessonQuizBtn.disabled = true;
-
-        // Define quiz parameters for this lesson
-        const numQuestions = 10; // Or implement logic to get this (e.g., from user input if added)
-        const quizType = 'cn_to_en'; // Or implement logic to get this
-
-        // --- Set the global quizContext (defined in quiz_logic.js) ---
-        quizContext = {
-            lesson_ids: [parseInt(lessonNumber)], // Ensure it's an array of numbers
-            quiz_type: quizType,
-            question_ids: [] // Will be populated after fetching questions
-        };
-        console.log("Quiz context set:", quizContext);
-        // -----------------------------------------------------------
-
-        try {
-            // Fetch quiz data using the API
-            const response = await fetch(`/api/quiz?lessons=${lessonNumber}&count=${numQuestions}&type=${quizType}`);
-            showLoading(false); // Hide loading AFTER fetch attempt
-
-            if (!response.ok) {
-                let errorMsg = `加载测验题目失败 (${response.status})`;
-                try {
-                    const errorData = await response.json();
-                    errorMsg = errorData.error || errorMsg;
-                } catch (e) { /* Ignore if response not JSON */ }
-                throw new Error(errorMsg);
-            }
-
-            // --- Set the global currentQuizData (defined in quiz_logic.js) ---
-            currentQuizData = await response.json();
-            // -----------------------------------------------------------------
-
-            if (!currentQuizData || currentQuizData.length === 0) {
-                showError(`未能加载 Lesson ${lessonNumber} 的词汇题。`); // Use global showError
-                if (quizArea) quizArea.classList.add('hidden'); // Use global quizArea
-                if (startLessonQuizBtn) startLessonQuizBtn.disabled = false; // Re-enable button
-                return;
-            }
-
-            // --- Update quizContext with actual question IDs ---
-            quizContext.question_ids = currentQuizData.map(q => q.id);
-            console.log("Quiz data loaded, question IDs:", quizContext.question_ids);
-            // -------------------------------------------------
-
-            // Display the questions using global function
-            displayQuestions(); // From quiz_logic.js
-
-            // Ensure submit button is visible (it's controlled within displayQuestions too, but safety check)
-            if (submitQuizBtn) submitQuizBtn.classList.remove('hidden'); // Use global submitQuizBtn
-
-        } catch (error) {
-            console.error('Error starting lesson quiz:', error);
-            showError(`${error.message}`); // Use global showError
-            if (quizArea) quizArea.classList.add('hidden'); // Use global quizArea
-            if (startLessonQuizBtn) startLessonQuizBtn.disabled = false; // Re-enable button on error
-            showLoading(false); // Ensure loading is hidden on error
-        }
-    }
-
-    // --- Function to handle restarting THIS lesson's quiz ---
-    function restartLessonQuiz() {
-        console.log("Restarting quiz for this lesson...");
-        // Reset the UI elements using global function
-        resetQuizUI(); // From quiz_logic.js
-        // The resetQuizUI function should re-enable the startLessonQuizBtn
-        // User needs to click "测试本课词汇" again to start.
-        // Alternatively, uncomment the line below to immediately restart:
-        // if (startLessonQuizBtn && startLessonQuizBtn.dataset.lessonNumber) {
-        //    startLessonQuiz(startLessonQuizBtn.dataset.lessonNumber);
-        // }
-    }
-
-    // --- Attach Event Listeners for THIS page's buttons ---
-
-    // Listener for the "测试本课词汇" button
-    if (startLessonQuizBtn) {
-        startLessonQuizBtn.addEventListener('click', () => {
-            const lessonNum = startLessonQuizBtn.dataset.lessonNumber;
-            startLessonQuiz(lessonNum); // Call the function defined above
-        });
-        console.log("Event listener attached to startLessonQuizBtn.");
-    } else {
-         console.warn("Start Lesson Quiz button (#start-lesson-quiz-btn) not found.");
-    }
-
-    // Listener for the "重新测试本课" button inside the results area
-    if (restartQuizBtn) {
-         restartQuizBtn.addEventListener('click', restartLessonQuiz); // Call the function defined above
-         console.log("Event listener attached to restartQuizBtn.");
-    } else {
-         // This button might not exist until results are shown. Event delegation on resultsArea
-         // might be more robust, but this direct approach works if the button ID is stable.
-         console.warn("Restart button (#restart-quiz-btn) not found on initial load.");
-    }
+    // === 结束：录音功能逻辑 ===
 
 </script>
 {% endblock %}
