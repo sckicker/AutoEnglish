@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     {# --- CSRF Token for AJAX requests --- #}
+    {# 确保你的 Flask 应用已启用 CSRF 保护 (通常通过 Flask-WTF) #}
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <!-- Bootstrap CSS -->
@@ -15,6 +16,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
 
     {# --- Your Custom CSS --- #}
+    {# 确保你的自定义 CSS 文件路径正确 #}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 
     <title>{% block title %}NCE Vocab Project{% endblock %} - 新概念词汇学习</title>
@@ -22,7 +24,7 @@
     {# --- Block for extra page-specific CSS --- #}
     {% block styles_extra %}{% endblock %}
 </head>
-<body class="d-flex flex-column min-vh-100">
+<body class="d-flex flex-column min-vh-100"> {# Ensure footer stays at bottom #}
 
     {# --- Navigation Bar --- #}
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4 shadow-sm">
@@ -62,7 +64,7 @@
                         {# 管理面板链接 (仅管理员可见) #}
                         {% if current_user.is_admin %}
                             <li class="nav-item">
-                                <a class="nav-link {{ 'active' if request.endpoint.startswith('admin_') or request.endpoint in ['manage_vocabulary', 'manage_users'] else '' }}" href="{{ url_for('admin_dashboard') }}">
+                                <a class="nav-link {{ 'active' if request.endpoint.startswith('admin_') or request.endpoint in ['manage_vocabulary', 'manage_users', 'admin_dashboard'] else '' }}" href="{{ url_for('admin_dashboard') }}">
                                     <i class="bi bi-shield-lock"></i> 管理面板
                                 </a>
                             </li>
@@ -75,19 +77,25 @@
                          <li class="nav-item">
                              <a class="nav-link {{ 'active' if request.endpoint == 'wrong_answers' else '' }}" href="{{ url_for('wrong_answers') }}"><i class="bi bi-x-octagon"></i> 错题本</a>
                          </li>
+                         {# === 新增：我的收藏链接 === #}
+                         <li class="nav-item">
+                            <a class="nav-link {{ 'active' if request.endpoint == 'view_favorites' else '' }}" href="{{ url_for('view_favorites') }}">
+                                <i class="bi bi-star-fill"></i> 我的收藏 {# 使用实心星标 #}
+                            </a>
+                        </li>
+                         {# ======================== #}
 
                         {# 用户下拉菜单 #}
                          <li class="nav-item dropdown">
                            <a class="nav-link dropdown-toggle" href="#" id="navbarUserDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                              <i class="bi bi-person-circle"></i>
                              {{ current_user.username }}
-                             {# === 修改：总是显示用户等级 Badge === #}
+                             {# 显示用户等级 Badge #}
                              {% if current_user.is_admin %}
-                                 <span class="badge rounded-pill bg-danger ms-1">管理员</span> {# 管理员用红色 #}
+                                 <span class="badge rounded-pill bg-danger ms-1">管理员</span>
                              {% else %}
-                                 <span class="badge rounded-pill bg-secondary ms-1">普通用户</span> {# 普通用户用灰色 #}
+                                 <span class="badge rounded-pill bg-secondary ms-1">普通用户</span>
                              {% endif %}
-                             {# === 结束修改 === #}
                            </a>
                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarUserDropdown">
                              <li>
@@ -144,7 +152,8 @@
     {# --- Footer --- #}
     <footer class="footer py-3 bg-light border-top">
       <div class="container text-center">
-        <span class="text-muted">NCE Vocab Project ©2025. 请注意《新概念英语》版权。</span>
+         {# 使用传递的 current_time 或提供回退年份 #}
+        <span class="text-muted">NCE Vocab Project © {{ '2025' }}. 请注意《新概念英语》版权。</span>
       </div>
     </footer>
     {# --- End Footer --- #}
@@ -154,6 +163,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
 
     {# --- Load YOUR Shared/Global JavaScript Logic --- #}
+    {# !!! 确保只加载一次 !!! #}
     <script src="{{ url_for('static', filename='js/quiz_logic.js') }}"></script>
     {# --------------------------------------------- #}
 

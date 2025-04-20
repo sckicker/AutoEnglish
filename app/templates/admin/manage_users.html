@@ -1,64 +1,74 @@
-{# app/templates/admin/manage_users.html #}
-{% extends "base.html" %}
+{# app/templates/admin/manage_users.html - Enhanced #}
+{% extends "base.html" %} {# 或者你的管理后台专用 base 模板 #}
 
-{% block title %}用户管理{% endblock %}
+{% block title %}{{ title }}{% endblock %}
 
-{% block content %}
-<h2>用户管理 (User Management)</h2>
-<p class="text-muted">只有根管理员 ({{ root_admin_username }}) 可以授予或撤销其他用户的管理员权限。</p>
+{% block content %} {# 或者你的 admin 内容块 #}
+<div class="container mt-4 mb-5">
+    <h2 class="mb-4">{{ title }}</h2>
+    <p class="lead">此页面仅供超级管理员 ({{ root_admin_username }}) 使用，用于管理其他用户的普通管理员权限。</p>
+    <hr>
 
-{% if users %}
-<div class="table-responsive shadow-sm rounded">
-    <table class="table table-striped table-hover align-middle">
-        <thead class="table-light">
-            <tr>
-                <th>ID</th>
-                <th>用户名 (Username)</th>
-                <th>邮箱 (Email)</th>
-                <th>管理员? (Is Admin?)</th>
-                <th>操作 (Actions)</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for user in users %}
-            <tr>
-                <td>{{ user.id }}</td>
-                <td>{{ user.username }}</td>
-                <td>{{ user.email }}</td>
-                <td>
-                    {% if user.is_admin %}
-                        <span class="badge bg-success">是 (Yes)</span>
-                    {% else %}
-                        <span class="badge bg-secondary">否 (No)</span>
-                    {% endif %}
-                </td>
-                <td>
-                    {# --- Grant/Revoke Admin Form --- #}
-                    {# 根管理员不能被修改，所以这里不需要检查 user.is_root #}
-                    <form action="{{ url_for('toggle_admin_status', user_id=user.id) }}" method="POST" style="display: inline;">
-                        {{ csrf_token() }} {# 如果全局开启了 CSRF，表单需要包含 token #}
-                        {% if user.is_admin %}
-                            <button type="submit" class="btn btn-sm btn-warning" onclick="return confirm('确定要撤销该用户的管理员权限吗？');">
-                                <i class="bi bi-person-dash-fill"></i> 撤销管理员
-                            </button>
-                        {% else %}
-                             <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('确定要授予该用户管理员权限吗？');">
-                                <i class="bi bi-person-check-fill"></i> 授予管理员
-                            </button>
-                        {% endif %}
-                    </form>
-                    {# --- End Form --- #}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    {% if users %}
+        <div class="table-responsive">
+            <table class="table table-striped table-hover table-sm align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>用户名 (Username)</th>
+                        <th>邮箱 (Email)</th>
+                        <th class="text-center">当前状态 (Status)</th>
+                        <th class="text-center">操作 (Action)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td>{{ user.username }}</td>
+                        <td>{{ user.email }}</td>
+                        <td class="text-center">
+                            {% if user.is_admin %}
+                                <span class="badge bg-success">管理员 (Admin)</span>
+                            {% else %}
+                                <span class="badge bg-secondary">普通用户 (User)</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {# --- 使用表单来触发 POST 请求 --- #}
+                            <form action="{{ url_for('toggle_admin_status', user_id=user.id) }}" method="POST" class="d-inline">
+                                {# --- 添加 CSRF Token (如果全局启用了 CSRFProtect) --- #}
+                                {# 方法1：使用 Flask-WTF 的隐藏标签 (如果你的 Flask 应用配置了 WTForms) #}
+                                {# {{ form.hidden_tag() }} <-- 如果有 form 对象传递过来 #}
+                                {# 方法2：手动渲染隐藏字段 (更通用) #}
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                {# ------------------------------------------------------- #}
+
+                                {# --- 根据当前状态显示不同的按钮文本和样式 --- #}
+                                {% if user.is_admin %}
+                                    <button type="submit" class="btn btn-sm btn-warning"
+                                            onclick="return confirm('确定要撤销用户 {{ user.username }} 的管理员权限吗？');">
+                                        <i class="bi bi-person-dash-fill"></i> 撤销管理员
+                                    </button>
+                                {% else %}
+                                    <button type="submit" class="btn btn-sm btn-info"
+                                            onclick="return confirm('确定要授予用户 {{ user.username }} 管理员权限吗？');">
+                                        <i class="bi bi-person-check-fill"></i> 授予管理员
+                                    </button>
+                                {% endif %}
+                            </form>
+                            {# --- 表单结束 --- #}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="alert alert-info">系统中没有其他可管理的用户。</div>
+    {% endif %}
+
 </div>
-{% else %}
-    <p>没有其他用户可供管理。</p>
-{% endif %}
+{% endblock %}
 
-<div class="mt-4">
-    <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">返回管理首页</a>
-</div>
+{% block scripts_extra %}
+{# 这个页面目前不需要额外的复杂 JS，但可以保留块 #}
 {% endblock %}

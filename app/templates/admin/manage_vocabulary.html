@@ -1,54 +1,129 @@
-{# app/templates/admin/manage_vocabulary.html - Updated to display data #}
-{% extends "base.html" %} {# Or your admin base template #}
+{# app/templates/admin/manage_vocabulary.html - Updated with Favorites Toggle #}
+{% extends "base.html" %} {# Or your admin base template if you have one #}
 
 {% block title %}{{ title }} - NCE 学习平台{% endblock %}
 
 {% block content %} {# Or your admin content block #}
 <div class="container mt-4 mb-5">
     <h2 class="mb-4">{{ title }}</h2>
-    <p class="lead">此页面用于管理 NCE Book 2 的词汇条目。</p>
+    <p class="lead">此页面用于管理系统中的所有 NCE Book 2 词汇条目。</p>
     <hr>
 
+    {# Placeholder for future "Add New Vocabulary" button/modal #}
     <div class="mb-3">
         <button class="btn btn-success disabled"> <i class="bi bi-plus-circle"></i> 添加新词汇 (功能待实现)</button>
     </div>
 
-    <table class="table table-striped table-hover table-bordered table-sm"> {# Added table-sm for compactness #}
-        <thead class="table-light">
-            <tr>
-                <th scope="col">课号 (Lesson)</th>
-                <th scope="col">英文单词 (English)</th>
-                <th scope="col">中文翻译 (Chinese)</th>
-                <th scope="col">词性 (POS)</th>
-                <th scope="col" style="width: 15%;">操作 (Actions)</th>
-            </tr>
-        </thead>
-        <tbody>
-            {# --- Loop through the vocabulary list passed from the route --- #}
-            {% if vocabulary %}
-                {% for item in vocabulary %}
+    {# Table to display vocabulary items #}
+    <div class="table-responsive">
+        {# Add ID to table for JS event delegation #}
+        <table class="table table-striped table-hover table-bordered table-sm align-middle" id="vocabulary-management-table">
+            <thead class="table-light">
                 <tr>
-                    <td>{{ item.lesson_number }}</td>
-                    <td>{{ item.english_word }}</td>
-                    <td>{{ item.chinese_translation }}</td>
-                    <td>{{ item.part_of_speech }}</td>
-                    <td>
-                        <button class="btn btn-sm btn-outline-primary disabled me-1" title="编辑 (功能待实现)"><i class="bi bi-pencil-square"></i></button>
-                        <button class="btn btn-sm btn-outline-danger disabled" title="删除 (功能待实现)"><i class="bi bi-trash"></i></button>
-                    </td>
+                    <th scope="col" style="width: 8%;" class="text-center">课号</th>
+                    <th scope="col">英文单词</th>
+                    <th scope="col">中文翻译</th>
+                    <th scope="col" style="width: 10%;">词性</th>
+                    {# === Added: Favorites Column Header === #}
+                    <th scope="col" style="width: 5%; text-align: center;" title="收藏状态 (您的)">收藏</th>
+                    {# ===================================== #}
+                    <th scope="col" style="width: 15%;">操作 (Actions)</th>
                 </tr>
-                {% endfor %}
-            {% else %}
-                {# --- This row is shown if the vocabulary list is empty --- #}
-                <tr>
-                    <td colspan="5" class="text-center text-muted">数据库中没有找到词汇记录。请先处理 PDF 文件。(No vocabulary items found in the database. Please process the PDF file first.)</td>
-                </tr>
-            {% endif %}
-            {# --- End loop --- #}
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                {# Loop through the vocabulary list passed from the backend route #}
+                {% if vocabulary %}
+                    {% for item in vocabulary %}
+                    <tr data-vocab-id="{{ item.id }}"> {# Add vocab ID to row if needed #}
+                        {# --- Standard Data Cells --- #}
+                        <td class="text-center">{{ item.lesson_number }}</td>
+                        <td>{{ item.english_word }}</td>
+                        <td>{{ item.chinese_translation }}</td>
+                        <td>{{ item.part_of_speech or '' }}</td> {# Handle potentially empty POS #}
 
-    {# Consider adding pagination here if the list becomes very long #}
+                        {# === Added: Favorite Toggle Button Cell === #}
+                        <td style="text-align: center;">
+                             {# Check if this vocab_id is in the set passed from the route #}
+                             {% set is_faved = item.id in favorited_ids %}
+                             <button class="btn btn-link p-1 favorite-toggle-btn" {# Class for JS #}
+                                     data-vocab-id="{{ item.id }}"
+                                     data-is-favorite="{{ 'true' if is_faved else 'false' }}" {# Initial state #}
+                                     title="{{ '从我的收藏中移除' if is_faved else '添加到我的收藏' }}"> {# Title reflects admin's own favorites #}
+                                 {# Display star based on *admin's* favorite status #}
+                                 <i class="bi {{ 'bi-star-fill text-warning' if is_faved else 'bi-star' }} fs-5"></i>
+                             </button>
+                        </td>
+                        {# ======================================= #}
+
+                        {# --- Actions Cell (Edit/Delete - Placeholder) --- #}
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary disabled me-1" title="编辑 (功能待实现)"><i class="bi bi-pencil-square"></i></button>
+                            <button class="btn btn-sm btn-outline-danger disabled" title="删除 (功能待实现)"><i class="bi bi-trash"></i></button>
+                        </td>
+                    </tr>
+                    {% endfor %} {# End of vocabulary loop #}
+                {% else %}
+                    {# Message shown if the vocabulary list is empty #}
+                    <tr>
+                        {# Adjusted colspan to account for the new "Favorite" column #}
+                        <td colspan="6" class="text-center text-muted py-3">
+                            数据库中没有找到词汇记录。请先在管理首页 <a href="{{ url_for('admin_dashboard') }}">处理 PDF 文件</a>。
+                            <br>(No vocabulary items found. Please process the PDF file on the admin dashboard first.)
+                        </td>
+                    </tr>
+                {% endif %} {# End of check for vocabulary #}
+            </tbody>
+        </table>
+    </div>
+
+    {# Future pagination controls could go here #}
 
 </div> {# End container #}
+{% endblock %} {# End block content #}
+
+{# --- JavaScript for page interactivity --- #}
+{% block scripts_extra %}
+<script>
+// This script block assumes:
+// 1. quiz_logic.js (containing handleFavoriteToggle function) is loaded globally via base.html.
+// 2. handleFavoriteToggle uses event delegation (e.g., listening on document or table).
+
+document.addEventListener('DOMContentLoaded', () => {
+    const vocabTable = document.getElementById('vocabulary-management-table');
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content'); // Needed by handleFavoriteToggle
+
+    if (!vocabTable) {
+        console.warn("Vocabulary management table not found.");
+        return;
+    }
+
+    // --- Check if the global favorite handler is available ---
+    if (typeof handleFavoriteToggle === 'function') {
+         // Option 1: Rely on global event delegation set up in quiz_logic.js
+         console.log("Relying on global handleFavoriteToggle event listener.");
+         // Make sure quiz_logic.js has: document.addEventListener('click', handleFavoriteToggle);
+
+         // Option 2: Attach delegation specifically to this table (if global isn't set up)
+         /*
+         console.log("Attaching specific event listener to vocabulary table for favorites.");
+         vocabTable.addEventListener('click', handleFavoriteToggle);
+         */
+    } else {
+         console.error("Error: handleFavoriteToggle function is not defined. Make sure quiz_logic.js is loaded correctly before this script.");
+         // Optionally add a fallback message to the user or disable buttons
+         const favButtons = vocabTable.querySelectorAll('.favorite-toggle-btn');
+         favButtons.forEach(btn => btn.disabled = true);
+         // You might want to display an error using the #error-message div if it exists here
+         const errorContainer = document.getElementById('error-message');
+         if (errorContainer) {
+             errorContainer.textContent = '错误：无法初始化收藏功能。';
+             errorContainer.classList.remove('hidden');
+         }
+    }
+
+    // --- Add specific JS for this admin page if needed in the future ---
+    // For example, handling Edit/Delete button clicks when implemented.
+
+});
+</script>
 {% endblock %}

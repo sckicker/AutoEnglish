@@ -4,24 +4,33 @@ from flask import abort, current_app
 from flask_login import current_user
 
 def admin_required(f):
-    """检查用户是否登录且拥有管理员权限 (根或普通)"""
+    """Decorator to ensure user is logged in and is an admin."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
-            # 使用 Flask-Login 的未授权处理（通常重定向到登录页）
-            return current_app.login_manager.unauthorized()
-        if not current_user.has_admin_privileges:
-            abort(403) # Forbidden - 禁止访问
+            # 如果需要，可以重定向到登录页而不是直接 403
+            # from flask import redirect, url_for
+            # return redirect(url_for('login', next=request.url))
+            abort(403)
+        if not current_user.is_admin: # 检查数据库中的 is_admin 标志
+            abort(403) # Forbidden
         return f(*args, **kwargs)
     return decorated_function
 
 def root_admin_required(f):
-    """检查用户是否登录且是根管理员"""
+    """Decorator to ensure user is logged in, is an admin, AND matches the ROOT_ADMIN_USERNAME."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if not current_user.is_authenticated:
-            return current_app.login_manager.unauthorized()
-        if not current_user.is_root:
+        root_username = current_app.config.get('ROOT_ADMIN_USERNAME', 'root') # 从配置获取根用户名
+
+        # --- 修改这里的判断逻辑 ---
+        is_root = (current_user.is_authenticated and
+                   current_user.is_admin and # 确保也是普通管理员
+                   current_user.username == root_username) # 检查用户名是否匹配
+
+        if not is_root:
+            current_app.logger.warning(f"Access denied for user '{current_user.username}' to root admin required route. User is_admin={current_user.is_admin}, Required username='{root_username}'")
             abort(403) # Forbidden
+        # -------------------------
         return f(*args, **kwargs)
     return decorated_function

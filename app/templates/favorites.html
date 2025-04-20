@@ -1,0 +1,130 @@
+{# app/templates/favorites.html - Displays User's Favorite Vocabulary #}
+{% extends "base.html" %}
+
+{% block title %}{{ title }} - NCE 学习平台{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <h1 class="mb-4">{{ title }}</h1>
+
+    {% if favorites %}
+        <div class="list-group shadow-sm" id="favorites-list"> {# Add ID for JS targeting #}
+            {% for vocab in favorites %}
+                <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-vocab-id="{{ vocab.id }}"> {# Add data-vocab-id #}
+                    <div>
+                        <h5 class="mb-1">{{ vocab.english_word }} <span class="badge bg-info fw-normal">{{ vocab.part_of_speech or '' }}</span></h5>
+                        <p class="mb-1 text-muted">{{ vocab.chinese_translation }}</p>
+                        <small class="text-secondary">Lesson {{ vocab.lesson_number }}</small>
+                    </div>
+                    {# --- Favorite Toggle Button (Initially shows filled star) --- #}
+                    <button class="btn btn-link text-warning p-1 favorite-toggle-btn"
+                            data-vocab-id="{{ vocab.id }}"
+                            data-is-favorite="true" {# Assume items on this page are favorites #}
+                            title="从收藏中移除 (Remove from Favorites)">
+                        <i class="bi bi-star-fill fs-4"></i> {# Filled star icon #}
+                    </button>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info" role="alert">
+            你还没有收藏任何词汇。去 <a href="{{ url_for('view_lessons') }}" class="alert-link">课程列表</a> 或 <a href="{{ url_for('wrong_answers') }}" class="alert-link">错题本</a> 看看吧！
+            (You haven't favorited any vocabulary yet. Check out the <a href="{{ url_for('view_lessons') }}" class="alert-link">Lesson List</a> or <a href="{{ url_for('wrong_answers') }}" class="alert-link">Wrong Answers</a>!)
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts_extra %}
+{# Include JavaScript for handling favorite toggle on this page #}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const favoritesList = document.getElementById('favorites-list');
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+    if (favoritesList) {
+        favoritesList.addEventListener('click', async (event) => {
+            const toggleButton = event.target.closest('.favorite-toggle-btn');
+
+            if (!toggleButton) return; // Click wasn't on a toggle button
+
+            event.preventDefault();
+            const vocabId = toggleButton.dataset.vocabId;
+            const isCurrentlyFavorite = toggleButton.dataset.isFavorite === 'true'; // Check current state
+            const icon = toggleButton.querySelector('i');
+
+            if (!vocabId) return;
+
+            // Optimistic UI update (optional, makes it feel faster)
+            // icon.classList.toggle('bi-star');
+            // icon.classList.toggle('bi-star-fill');
+            // toggleButton.title = isCurrentlyFavorite ? "添加到收藏" : "从收藏中移除";
+            // toggleButton.disabled = true; // Disable during request
+
+            try {
+                const response = await fetch(`/api/vocabulary/${vocabId}/toggle_favorite`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json', // Not strictly needed for this POST
+                        'Accept': 'application/json',
+                        ...(csrfToken && {'X-CSRFToken': csrfToken}) // Add CSRF token
+                    },
+                });
+
+                if (!response.ok) {
+                     // Revert optimistic update on error
+                     // icon.classList.toggle('bi-star');
+                     // icon.classList.toggle('bi-star-fill');
+                    let errorMsg = `操作失败 (${response.status})`;
+                    try { const ed = await response.json(); errorMsg = ed.error || errorMsg;} catch(e){}
+                    throw new Error(errorMsg);
+                }
+
+                const data = await response.json();
+
+                if (data.success) {
+                    // Update button based on actual new state from server
+                    const nowIsFavorite = data.is_favorite;
+                    toggleButton.dataset.isFavorite = nowIsFavorite; // Update data attribute
+
+                    if (nowIsFavorite) {
+                        icon.classList.remove('bi-star');
+                        icon.classList.add('bi-star-fill');
+                        toggleButton.title = "从收藏中移除";
+                        toggleButton.classList.add('text-warning'); // Ensure warning color
+                    } else {
+                        icon.classList.remove('bi-star-fill');
+                        icon.classList.add('bi-star');
+                        toggleButton.title = "添加到收藏";
+                         toggleButton.classList.remove('text-warning'); // Remove warning color
+                        // --- Remove item from list on this page ---
+                        const listItem = toggleButton.closest('.list-group-item');
+                        if (listItem) {
+                            listItem.style.opacity = '0'; // Fade out effect
+                             setTimeout(() => listItem.remove(), 300); // Remove after fade
+                            // Check if list becomes empty
+                            if (favoritesList.children.length === 1) { // Check if only this one is left before removal
+                                favoritesList.innerHTML = '<div class="alert alert-info">你的收藏列表现在是空的。</div>';
+                            }
+                        }
+                        // -----------------------------------------
+                    }
+                } else {
+                    throw new Error(data.error || "操作失败");
+                }
+
+            } catch (error) {
+                console.error('Error toggling favorite:', error);
+                alert(`错误: ${error.message}`); // Show error
+                // Revert optimistic UI update if implemented
+                // icon.classList.toggle('bi-star');
+                // icon.classList.toggle('bi-star-fill');
+                // toggleButton.title = isCurrentlyFavorite ? "从收藏中移除" : "添加到收藏";
+            } finally {
+                // toggleButton.disabled = false; // Re-enable button
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

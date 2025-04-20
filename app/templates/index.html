@@ -1,4 +1,4 @@
-{# app/templates/index.html - 完整代码 V1.2 (配合 CSS V1.4) - 移除了 admin_login_simple 表单 #}
+{# app/templates/index.html - Updated for quiz_logic.js Interface #}
 {% extends "base.html" %}
 
 {% block title %}首页 - 新概念英语学习平台{% endblock %}
@@ -7,33 +7,34 @@
 {# 使用 Bootstrap 容器 #}
 <div class="container mt-4 mb-5">
 
-    {# --- 1. 新的页面顶部介绍区 ('Hero Section') --- #}
-    <div class="hero-section text-center"> {# 应用新定义的 CSS 类 #}
+    {# --- 1. 页面顶部介绍区 --- #}
+    <div class="hero-section text-center mb-5"> {# Added margin-bottom #}
         <h2>新概念英语词汇学习平台</h2>
         <p class="lead">选择下方课程查看课文，或勾选课程后进行词汇测试。</p>
     </div>
     {# --- 介绍区结束 --- #}
 
 
-    {# 2. 课程选择区域 #}
-    <div class="mb-4" id="lesson-selection-section"> {# <--- JS 需要的 ID #}
+    {# 2. 课程选择区域 --- #}
+    <div class="mb-4" id="lesson-selection-section">
         <h3 class="mb-3">课程列表 (Lesson List)</h3>
-        <form id="lesson-selector">
-            <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3"> {# 响应式网格布局 #}
+        {# Removed form tag as it's not submitting traditionally #}
+        <div id="lesson-selector"> {# Keep ID for JS selection #}
+            <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3">
                 {% if lessons %}
                     {% for lesson_num in lessons %}
                         <div class="col">
-                            <div class="card h-100 shadow-sm"> {# 卡片样式 #}
+                            <div class="card h-100 shadow-sm">
                                 <div class="card-body d-flex flex-column">
                                     <h5 class="card-title mb-3">Lesson {{ lesson_num }}</h5>
-                                    <div class="mt-auto pt-2"> {# 操作区推到底部 (移除border-top让CSS控制) #}
-                                        <div class="d-grid gap-2 mb-2"> {# 按钮间距 #}
+                                    <div class="mt-auto pt-2">
+                                        <div class="d-grid gap-2 mb-2">
                                             <a href="{{ url_for('view_lesson', lesson_number=lesson_num) }}" class="btn btn-sm btn-outline-primary" title="查看 Lesson {{ lesson_num }} 课文">
                                                 <i class="bi bi-book-half"></i> 查看课文
                                             </a>
                                         </div>
                                         <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" name="lesson" value="{{ lesson_num }}" id="lesson-check-{{ lesson_num }}">
+                                            <input class="form-check-input lesson-checkbox" type="checkbox" name="lesson" value="{{ lesson_num }}" id="lesson-check-{{ lesson_num }}"> {# Added class #}
                                             <label class="form-check-label small" for="lesson-check-{{ lesson_num }}">
                                                 选择测验
                                             </label>
@@ -46,19 +47,20 @@
                 {% else %}
                     <div class="col-12">
                         <div class="alert alert-warning" role="alert">
-                            数据库中没有找到课程。请先 <a href="#" data-bs-toggle="modal" data-bs-target="#adminActionModal">处理 PDF 文件</a> (管理员操作)。
+                            数据库中没有找到课程。请管理员先 <a href="{{ url_for('admin_dashboard') }}">处理 PDF 文件</a>。
+                            {# Removed modal trigger, directly link to admin if appropriate #}
                         </div>
                     </div>
                 {% endif %}
             </div> {# End row #}
-        </form> {# End lesson-selector form #}
+        </div> {# End lesson-selector div #}
     </div> {# --- End lesson-selection-section --- #}
 
 
-    {# 3. 词汇测试选项区域 #}
-    <div class="mt-4 p-3 rounded" id="quiz-options-section"> {# <--- JS 需要的 ID (应用CSS中定义的样式) #}
-        <h3 class="mb-3">词汇测试选项 (Quiz Options)</h3>
-        <div class="row g-3 align-items-center mb-3">
+    {# 3. 词汇测试选项区域 --- #}
+    <div class="mt-4 p-4 rounded shadow-sm bg-light border" id="quiz-options-section"> {# Enhanced styling #}
+        <h3 class="mb-3 text-center">词汇测试选项 (Quiz Options)</h3> {# Centered title #}
+        <div class="row g-3 justify-content-center align-items-center mb-3"> {# Centered row content #}
             <div class="col-auto">
                 <label for="num-questions" class="col-form-label">题目数量:</label>
             </div>
@@ -70,139 +72,126 @@
             </div>
              <div class="col-auto">
                 <select id="quiz-type" class="form-select form-select-sm">
-                    <option value="cn_to_en" selected>中译英 (写英文)</option>
-                    <option value="en_to_cn">英译中 (写中文)</option>
+                    <option value="cn_to_en" selected>中译英 (选/写英文)</option> {# Adjusted text slightly #}
+                    <option value="en_to_cn">英译中 (选/写中文)</option>
                 </select>
              </div>
         </div>
-        <div>
-             <button type="button" id="start-quiz-btn" class="btn btn-primary btn-lg" disabled> {# 使用 btn-primary #}
+        <div class="text-center"> {# Center the button #}
+             <button type="button" id="start-quiz-btn" class="btn btn-primary btn-lg" disabled>
                  <i class="bi bi-play-circle-fill"></i> 开始单词测试 (Start Quiz)
              </button>
-             <small id="start-quiz-help" class="text-muted ms-2">请先在上方勾选课程</small>
+             <small id="start-quiz-help" class="text-muted d-block mt-2">请先在上方勾选课程</small> {# Use d-block for new line #}
         </div>
     </div> {# --- End quiz-options-section --- #}
 
 
-    {# 4. 隐藏的 JS 控制区域 #}
-    <hr class="my-4"> {# Bootstrap 水平线替代 #}
+    {# 4. 隐藏的动态内容区域 (Quiz, Results, Loading, Error) --- #}
+    {# These elements are manipulated by quiz_logic.js #}
+    <hr class="my-5"> {# Increased margin for separator #}
 
-    <div id="quiz-area" class="hidden mt-4">
-        <h2>测试进行中...</h2>
-        <div id="questions-container">
+    {# --- Combined dynamic area wrapper --- #}
+    <div class="dynamic-content-area">
+        {# Loading Indicator (Initially hidden) #}
+        <div id="loading-indicator" class="hidden mt-4 text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
             </div>
-        <div class="text-center">
-            <button type="button" id="submit-quiz-btn" class="btn btn-primary hidden mt-3">提交答案</button>
+            <p class="text-muted mt-2">请稍候...</p>
         </div>
-    </div>
 
-    <div id="results-area" class="hidden mt-4 p-3 border rounded bg-light">
-        <h2>测试结果</h2>
-        <p>你的得分: <span id="score" class="fw-bold"></span> / <span id="total-questions"></span></p>
-        <h3>错题回顾:</h3>
-        <ul id="incorrect-list" class="list-group list-group-flush mb-3">
+        {# Error Message Area (Initially hidden) #}
+        <div id="error-message" class="alert alert-danger hidden mt-4" role="alert"></div>
+
+        {# Quiz Area (Initially hidden) #}
+        <div id="quiz-area" class="hidden mt-4 p-3 border rounded bg-light shadow-sm">
+            <h2 id="quiz-title" class="text-center mb-4">测试进行中...</h2> {# Added ID for dynamic title #}
+            <div id="questions-container">
+                {# Questions inserted by JS #}
+            </div>
+            <div class="text-center">
+                <button type="button" id="submit-quiz-btn" class="btn btn-primary hidden mt-3">提交答案</button>
+            </div>
+        </div>
+
+        {# Results Area (Initially hidden) #}
+        <div id="results-area" class="hidden mt-4 p-3 border rounded bg-light shadow-sm">
+            <h2>测试结果</h2>
+            <p>你的得分: <span id="score" class="fw-bold"></span> / <span id="total-questions"></span></p>
+            <h3 id="incorrect-title">错题回顾:</h3>
+            <ul id="incorrect-list" class="list-group list-group-flush mb-3">
+                {# Incorrect answers inserted by JS #}
             </ul>
-        <button type="button" id="restart-quiz-btn" class="btn btn-secondary">重新开始 (Restart)</button>
-    </div>
-
-    <div id="loading-indicator" class="hidden mt-4 text-center">
-        <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
+            <button type="button" id="restart-quiz-btn" class="btn btn-info hidden">重新开始 (Restart)</button> {# Initially hidden #}
         </div>
-        <p class="text-muted mt-2">请稍候...</p>
     </div>
+    {# --- End dynamic content area --- #}
 
-     <div id="error-message" class="alert alert-danger hidden mt-4" role="alert"></div>
 
-
-    {# 5. 管理员操作区域 (移除了登录表单) #}
+    {# 5. 管理员操作区域 (保持不变) #}
+    {% if current_user.is_authenticated and current_user.is_admin %} {# Show only if admin is logged in #}
     <div class="admin-login-area mt-5 pt-4 border-top text-muted small">
         <details>
             <summary style="cursor: pointer;">管理员操作 (Admin Actions)</summary>
             <div class="mt-3 p-3 bg-light border rounded" style="max-width: 400px;">
-                {# --- 登录表单已移除 ---
-                <h4 class="h6">管理员登录</h4>
-                <form action="{{ url_for('admin_login_simple') }}" method="POST">
-                     <div class="mb-2">
-                        <label for="username" class="form-label">用户名:</label>
-                        <input type="text" class="form-control form-control-sm" id="username" name="username" required>
-                    </div>
-                    <div class="mb-2">
-                        <label for="password" class="form-label">密码:</label>
-                        <input type="password" class="form-control form-control-sm" id="password" name="password" required>
-                    </div>
-                    <button type="submit" class="btn btn-sm btn-secondary">登录</button>
-                </form>
-                <hr>
-                --- 登录表单结束 --- #}
-
-                 <h4 class="h6">处理 PDF (需要登录或权限)</h4>
-                 <form action="{{ url_for('process_pdf_route_admin') }}" method="post"> {# 指向 process_pdf_route_admin #}
+                 <h4 class="h6">处理 PDF</h4>
+                 <p><small>从此操作导入或更新课文和词汇数据。</small></p>
+                 {# Link to admin dashboard where the button is located #}
+                 <a href="{{ url_for('admin_dashboard') }}" class="btn btn-sm btn-warning">前往处理 PDF</a>
+                 {# Or keep the form if you prefer direct submission, but ensure CSRF/Auth #}
+                 {# <form action="{{ url_for('process_pdf_route_admin') }}" method="post">
                      <button type="submit" class="btn btn-sm btn-warning">处理 NCE Book 2 PDF</button>
-                 </form>
+                 </form> #}
             </div>
         </details>
     </div>
+    {% endif %}
 
 </div> {# End container #}
 
-{# 模态框 #}
+{# Modal (保持不变) #}
 <div class="modal fade" id="adminActionModal" tabindex="-1" aria-labelledby="adminActionModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="adminActionModalLabel">管理员操作</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p>处理 PDF 文件是管理员操作。请先登录或确认权限。</p>
-                 {# 这个模态框里的按钮只是示例，实际处理应由登录后的页面触发 #}
-                 {# <form action="{{ url_for('process_pdf_route_admin') }}" method="post">
-                     <button type="submit" class="btn btn-warning">确认处理 PDF</button>
-                 </form> #}
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
-            </div>
-        </div>
-    </div>
+    {# ... modal content ... #}
 </div>
 
 {% endblock %}
 
+
+{# --- JavaScript for index.html Specific Logic --- #}
 {% block scripts_extra %}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // --- 获取元素 ---
+    // --- Get elements specific to index page controls ---
     const startQuizBtn = document.getElementById('start-quiz-btn');
-    const lessonCheckboxes = document.querySelectorAll('#lesson-selector input[name="lesson"]');
+    const lessonCheckboxes = document.querySelectorAll('#lesson-selector .lesson-checkbox'); // Use class selector
     const startQuizHelp = document.getElementById('start-quiz-help');
     const numQuestionsInput = document.getElementById('num-questions');
     const quizTypeSelect = document.getElementById('quiz-type');
+    const restartIndexBtn = document.getElementById('restart-quiz-btn'); // Restart button in results area
+    const quizTitleH2 = document.getElementById('quiz-title'); // Optional: For dynamic title
 
-    // --- 函数：检查是否有课程被选中，并更新按钮状态 ---
+    // --- Function to check checkbox state and update Start button ---
     function checkSelection() {
         if (!startQuizBtn) return;
         let oneChecked = false;
         lessonCheckboxes.forEach(checkbox => {
             if (checkbox.checked) oneChecked = true;
         });
-        startQuizBtn.disabled = !oneChecked; // 启用/禁用按钮
-        if (startQuizHelp) startQuizHelp.style.display = oneChecked ? 'none' : 'inline'; // 显示/隐藏提示
+        startQuizBtn.disabled = !oneChecked;
+        if (startQuizHelp) startQuizHelp.style.display = oneChecked ? 'none' : 'block'; // Use block/none for visibility
     }
 
-    // --- 为复选框添加事件监听 ---
+    // --- Attach listeners to checkboxes ---
     if (lessonCheckboxes.length > 0) {
         lessonCheckboxes.forEach(checkbox => {
             checkbox.addEventListener('change', checkSelection);
         });
-    } else if(startQuizBtn) {
-        // 如果没有课程可选，确保按钮是禁用的
-        startQuizBtn.disabled = true;
-         if (startQuizHelp) startQuizHelp.style.display = 'inline';
+    } else if (startQuizBtn) {
+        startQuizBtn.disabled = true; // Disable if no lessons
+        if (startQuizHelp) startQuizHelp.style.display = 'block';
     }
 
-    // --- 处理从 lesson_text.html 跳转过来的预选参数 ---
+    // --- Handle pre-selection from URL parameter ---
     const urlParams = new URLSearchParams(window.location.search);
     const lessonToQuiz = urlParams.get('quiz_lesson');
     if (lessonToQuiz) {
@@ -210,24 +199,29 @@ document.addEventListener('DOMContentLoaded', () => {
         const targetCheckbox = document.getElementById(checkboxId);
         if (targetCheckbox) {
             targetCheckbox.checked = true;
-            console.log(`Checkbox for lesson ${lessonToQuiz} checked via URL parameter.`);
+            console.log(`index.html: Checkbox for lesson ${lessonToQuiz} checked via URL.`);
+             // Optionally scroll to quiz options if coming from lesson page
+             const quizOptionsSection = document.getElementById('quiz-options-section');
+             if (quizOptionsSection && window.location.hash === '#quiz-options-section') {
+                quizOptionsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+             }
         } else {
-            console.warn(`Checkbox with ID ${checkboxId} for URL parameter not found.`);
+            console.warn(`index.html: Checkbox with ID ${checkboxId} for URL param not found.`);
         }
-        // 清除 URL 参数，避免刷新页面时再次触发 (可选)
-        // window.history.replaceState({}, document.title, window.location.pathname);
+        // Optional: Remove the query parameter from URL without reloading
+        // if (window.history.replaceState) {
+        //    const cleanUrl = window.location.pathname + window.location.hash;
+        //    window.history.replaceState({ path: cleanUrl }, '', cleanUrl);
+        // }
     }
 
-    // --- 设置按钮初始状态 ---
-    checkSelection(); // 根据当前勾选（包括 URL 参数处理后）设置按钮状态
+    // --- Set initial button state ---
+    checkSelection();
 
-
-    // ============================================================
-    // === 新增：为 "开始单词测试" 按钮添加点击事件监听器 ===
-    // ============================================================
+    // --- Attach listener to the "Start Quiz" button ---
     if (startQuizBtn && numQuestionsInput && quizTypeSelect) {
         startQuizBtn.addEventListener('click', async () => {
-            // 1. 获取选中的课程
+            // 1. Get selected lessons
             const selectedLessons = [];
             lessonCheckboxes.forEach(checkbox => {
                 if (checkbox.checked) {
@@ -235,48 +229,61 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
 
-            // 2. 检查是否选中了课程
+            // 2. Validate selection
             if (selectedLessons.length === 0) {
-                showError('请至少选择一个课程进行测试。'); // 使用全局 showError
-                return; // 停止执行
+                // Use global showError from quiz_logic.js (via window.quizLogic)
+                if (window.quizLogic && typeof window.quizLogic.showError === 'function') {
+                    window.quizLogic.showError('请至少选择一个课程进行测试。');
+                } else {
+                    alert('请至少选择一个课程进行测试。'); // Fallback
+                }
+                return;
             }
 
-            // 3. 获取题目数量和测试类型
-            const numQuestions = numQuestionsInput.value || 10; // 获取值，若为空则默认10
+            // 3. Get quiz options
+            const numQuestions = numQuestionsInput.value || 10;
             const quizType = quizTypeSelect.value;
 
-            console.log(`Starting quiz with lessons: ${selectedLessons.join(',')}, count: ${numQuestions}, type: ${quizType}`);
+            console.log(`index.html: Starting quiz. Lessons: ${selectedLessons.join(',')}, Count: ${numQuestions}, Type: ${quizType}`);
 
-            // 4. 调用异步函数开始测验流程
+            // 4. Call the async function to fetch and display quiz
             await startQuizFromIndex(selectedLessons, numQuestions, quizType);
         });
-        console.log("Event listener attached to startQuizBtn.");
+        console.log("index.html: Event listener attached to startQuizBtn.");
     } else {
-        console.warn("Could not find startQuizBtn, numQuestionsInput, or quizTypeSelect to attach listener.");
+        console.warn("index.html: Could not find all elements (start button, number input, type select) to attach listener.");
     }
 
-
-    // --- 新增：开始测验的核心异步函数 (index.html 版本) ---
+    // --- Async Function to Start Quiz (Index Page Version) ---
+    // This function interacts with the globally available functions/variables from quiz_logic.js
     async function startQuizFromIndex(selectedLessonNumbers, numberOfQuestions, quizTypeValue) {
-        // --- 使用 quiz_logic.js 中的函数和变量 ---
-        resetQuizUI();      // 重置界面状态
-        showLoading(true);  // 显示加载动画
-        hideError();        // 隐藏之前的错误
-        if(startQuizBtn) startQuizBtn.disabled = true; // 禁用开始按钮
+        // Check if quizLogic object and necessary functions exist
+        if (!window.quizLogic || typeof window.quizLogic.resetQuizUI !== 'function' ||
+            typeof window.quizLogic.showLoading !== 'function' || typeof window.quizLogic.hideError !== 'function' ||
+            typeof window.quizLogic.displayQuestions !== 'function' || typeof window.quizLogic.showError !== 'function' ) {
+                alert("错误：测验核心逻辑未加载，请刷新页面重试。");
+                console.error("index.html: Required functions from quizLogic are missing!");
+                return;
+            }
 
-        // --- 设置全局 quizContext ---
-        quizContext = {
-            lesson_ids: selectedLessonNumbers.map(n => parseInt(n)), // 确保是数字数组
+        quizLogic.resetQuizUI();      // Use global reset function
+        quizLogic.showLoading(true);  // Use global showLoading
+        quizLogic.hideError();        // Use global hideError
+        if(startQuizBtn) startQuizBtn.disabled = true;
+
+        // --- Set the global quizContext (defined in quiz_logic.js) ---
+        quizContext = { // Assign to the global variable
+            lesson_ids: selectedLessonNumbers.map(n => parseInt(n)),
             quiz_type: quizTypeValue,
-            question_ids: [] // 稍后填充
+            question_ids: []
         };
-        console.log("Quiz context set for index:", quizContext);
-        // ----------------------------
+        console.log("index.html: Global quizContext set:", quizContext);
+        // -----------------------------------------------------------
 
         try {
             const lessonsParam = selectedLessonNumbers.join(',');
             const response = await fetch(`/api/quiz?lessons=${lessonsParam}&count=${numberOfQuestions}&type=${quizTypeValue}`);
-            showLoading(false); // API 调用后隐藏加载
+            quizLogic.showLoading(false); // Hide loading after fetch
 
             if (!response.ok) {
                 let errorMsg = `加载测验题目失败 (${response.status})`;
@@ -284,62 +291,67 @@ document.addEventListener('DOMContentLoaded', () => {
                 throw new Error(errorMsg);
             }
 
-            // --- 设置全局 currentQuizData ---
-            currentQuizData = await response.json();
-            // -----------------------------
+            // --- Set the global currentQuizData (defined in quiz_logic.js) ---
+            currentQuizData = await response.json(); // Assign to the global variable
+            // ---------------------------------------------------------------
 
             if (!currentQuizData || currentQuizData.length === 0) {
-                showError(`未能为选定课程加载词汇题。`);
-                if (quizArea) quizArea.classList.add('hidden');
-                if (startQuizBtn) startQuizBtn.disabled = false; // 重新启用开始按钮
+                quizLogic.showError(`未能为选定课程加载词汇题。`);
+                if (quizArea) quizArea.classList.add('hidden'); // Use global variable quizArea
+                if (startQuizBtn) startQuizBtn.disabled = false;
                 return;
             }
 
-            // --- 更新 quizContext 问题 ID ---
+            // --- Update global quizContext with question IDs ---
             quizContext.question_ids = currentQuizData.map(q => q.id);
-            console.log("Quiz data loaded, question IDs:", quizContext.question_ids);
-            // -------------------------------
+            console.log("index.html: Global quiz data loaded, question IDs:", quizContext.question_ids);
+            // ---------------------------------------------------
 
-            // 显示问题
-            displayQuestions(); // 来自 quiz_logic.js
+            // Optional: Update quiz title dynamically
+            if(quizTitleH2) {
+                const lessonText = selectedLessonNumbers.length > 1 ? `Lessons ${selectedLessonNumbers.join(', ')}` : `Lesson ${selectedLessonNumbers[0]}`;
+                quizTitleH2.textContent = `${lessonText} 词汇测试进行中...`;
+            }
 
-            // 确保提交按钮可见 (displayQuestions 也会做，双重保险)
+            // Display questions using global function
+            quizLogic.displayQuestions();
+
+            // Ensure submit button is visible (use global var)
             if (submitQuizBtn) submitQuizBtn.classList.remove('hidden');
 
-            // 滚动到测验区域 (可选，但体验更好)
-            if (quizArea) {
+            // Scroll to quiz area
+            if (quizArea) { // Use global variable quizArea
                  quizArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
 
         } catch (error) {
-            console.error('Error starting quiz from index:', error);
-            showError(`开始测试失败: ${error.message}`);
-            if (quizArea) quizArea.classList.add('hidden');
-            if (startQuizBtn) startQuizBtn.disabled = false; // 出错时重新启用按钮
-            showLoading(false);
+            console.error('index.html: Error starting quiz:', error);
+            quizLogic.showError(`${error.message}`); // Use global showError
+            if (quizArea) quizArea.classList.add('hidden'); // Use global quizArea
+            if (startQuizBtn) startQuizBtn.disabled = false;
+            quizLogic.showLoading(false); // Use global showLoading
         }
     }
 
-    // --- 新增：为 restart-quiz-btn 添加特定于首页的逻辑 ---
-    // 这个按钮在 results-area 内
-    const restartIndexBtn = document.getElementById('restart-quiz-btn');
+    // --- Attach listener to the Restart button in the results area ---
     if (restartIndexBtn) {
         restartIndexBtn.addEventListener('click', () => {
-            console.log("Restarting quiz from index page...");
-            resetQuizUI(); // 重置界面
-            // 滚动回课程选择区域
-            const lessonSection = document.getElementById('lesson-selection-section');
-            if(lessonSection) {
-                lessonSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            console.log("index.html: Restart button clicked.");
+            // Use global reset function
+            if (window.quizLogic && typeof window.quizLogic.resetQuizUI === 'function') {
+                window.quizLogic.resetQuizUI();
+                // Scroll back to lesson selection
+                const lessonSection = document.getElementById('lesson-selection-section');
+                if(lessonSection) {
+                    lessonSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            } else {
+                 console.error("index.html: quizLogic.resetQuizUI function not found!");
             }
-            // 用户需要重新选择课程并点击 "开始单词测试"
-            // 注意：如果你希望它自动重新开始上一次的测验，
-            // 你需要保存上一次的 selectedLessons, numQuestions, quizType
-            // 然后在这里调用 startQuizFromIndex(savedLessons, savedNum, savedType)
         });
-        console.log("Event listener attached to restartIndexBtn.");
+        console.log("index.html: Event listener attached to restartIndexBtn.");
     } else {
-        console.warn("Restart button (#restart-quiz-btn) not found on index page load.");
+        console.warn("index.html: Restart button (#restart-quiz-btn) not found on initial load.");
     }
 
 });

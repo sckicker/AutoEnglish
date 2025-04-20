@@ -1,150 +1,188 @@
-# app/models.py
+# app/models.py - Updated with User Favorites Feature
+
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_login import UserMixin # 假设你的 User 模型需要登录功能
+from flask_login import UserMixin
 from . import db # 导入你的 db 实例
 
-# 假设你的 User 模型也需要 Flask-Login
+# --- New Association Model for User Favorites ---
+class UserFavoriteVocabulary(db.Model):
+    """关联表/对象，记录用户收藏的词汇。"""
+    __tablename__ = 'user_favorite_vocabulary'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    vocabulary_id = db.Column(db.Integer, db.ForeignKey('vocabulary.id'), nullable=False, index=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow, index=True) # 收藏时间
+
+    # 添加唯一约束，防止同一用户重复收藏同一词汇
+    __table_args__ = (db.UniqueConstraint('user_id', 'vocabulary_id', name='_user_vocab_favorite_uc'),)
+
+    # 可以选择性地添加关系回指到 User 和 Vocabulary (如果需要在关联对象上操作)
+    # user = db.relationship("User", back_populates="favorite_associations")
+    # vocabulary = db.relationship("Vocabulary", back_populates="favorited_by_associations")
+
+    def __repr__(self):
+        return f'<UserFavorite User {self.user_id} Vocab {self.vocabulary_id}>'
+# --- End Association Model ---
+
 class User(UserMixin, db.Model):
-    __tablename__ = 'user' # 明确表名（好习惯）
+    __tablename__ = 'user'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(64), index=True, unique=True, nullable=False)
     email = db.Column(db.String(120), index=True, unique=True, nullable=False)
-    password_hash = db.Column(db.String(256)) # 注意长度可能需要调整
+    password_hash = db.Column(db.String(256))
     is_admin = db.Column(db.Boolean, default=False, nullable=False)
-    # 可能还有 last_seen, about_me 等字段...
 
-    # --- 关系定义：指向 WrongAnswer ---
-    # 使用 back_populates 明确指定 WrongAnswer 中的 'user' 属性来完成双向链接
-    # lazy='dynamic' 使得 user.wrong_answers 返回一个可查询对象，而不是直接加载所有记录
+    # --- 关系：指向 WrongAnswer ---
     wrong_answers = db.relationship(
         'WrongAnswer',
-        back_populates='user', # 指向 WrongAnswer.user
-        lazy='dynamic',        # 返回 Query 对象，适合一对多
-        cascade='all, delete-orphan' # 当删除 User 时，同时删除其关联的 WrongAnswer 记录
+        back_populates='user',
+        lazy='dynamic',
+        cascade='all, delete-orphan'
     )
 
-    # --- 关系定义：指向 QuizAttempt --- (示例，如果需要的话)
+    # --- 关系：指向 QuizAttempt ---
     quiz_attempts = db.relationship(
         'QuizAttempt',
         back_populates='user',
         lazy='dynamic',
         cascade='all, delete-orphan'
     )
-    # --- 结束关系定义 ---
+
+    # --- 新增关系：收藏的词汇 ---
+    # 通过 user_favorite_vocabulary 这个中间表/模型连接到 Vocabulary
+    favorite_vocabularies = db.relationship(
+        'Vocabulary',
+        secondary='user_favorite_vocabulary', # 指定中间表的名称
+        lazy='dynamic',                       # 返回查询对象
+        back_populates='favorited_by_users'   # 与 Vocabulary.favorited_by_users 关联
+        # 不需要 cascade delete-orphan，因为删除用户时，中间表的记录会因外键约束而删除或需要手动处理
+        # 删除收藏夹条目不应删除词汇本身
+    )
+    # --- 结束新增关系 ---
 
     def set_password(self, password):
-        # 确保使用足够强的哈希方法
         self.password_hash = generate_password_hash(password, method='pbkdf2:sha256')
 
     def check_password(self, password):
+        if not self.password_hash: # 处理密码哈希可能为空的情况
+             return False
         return check_password_hash(self.password_hash, password)
 
-    # 如果有 is_admin 字段，可以添加一个 property 供模板或逻辑使用
     @property
     def has_admin_privileges(self):
-        # 你可以在这里加入更复杂的逻辑，比如检查角色表
         return self.is_admin
 
     def __repr__(self):
         return f'<User {self.username} (Admin: {self.is_admin})>'
 
 
-class WrongAnswer(db.Model):
-    __tablename__ = 'wrong_answer' # 明确表名
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True) # 外键指向 user 表的 id
-    vocabulary_id = db.Column(db.Integer, db.ForeignKey('vocabulary.id'), nullable=False, index=True) # 外键指向 vocabulary 表的 id
-    timestamp_first_wrong = db.Column(db.DateTime, index=True, default=datetime.utcnow)
-    timestamp_last_wrong = db.Column(db.DateTime, index=True, default=datetime.utcnow)
-    incorrect_count = db.Column(db.Integer, default=1)
-
-    # --- 新增字段 ---
-    is_marked = db.Column(db.Boolean, default=False, nullable=False, index=True)
-    category = db.Column(db.String(50), nullable=True, index=True)
-    # --- 结束新增字段 ---
-
-    # --- 关系定义：指向 User ---
-    # 使用 back_populates 明确指定 User 中的 'wrong_answers' 属性来完成双向链接
-    user = db.relationship(
-        'User',
-        back_populates='wrong_answers' # 指向 User.wrong_answers
-    )
-
-    # --- 关系定义：指向 Vocabulary ---
-    # 假设 Vocabulary 模型中有一个名为 'wrong_answer_associations' (或类似) 的 back_populates
-    # 如果 Vocabulary 模型没有反向关系，可以只写 'Vocabulary'
-    vocabulary_item = db.relationship(
-        'Vocabulary',
-        back_populates='wrong_answer_associations' # <--- 你需要在 Vocabulary 模型中定义这个
-    )
-    # --- 结束关系定义 ---
-
-    def __repr__(self):
-        return f'<WrongAnswer User {self.user_id} Vocab {self.vocabulary_id} Marked: {self.is_marked} Cat: {self.category}>'
-
-# --- 你还需要确保 Vocabulary 模型中定义了对应的 back_populates ---
 class Vocabulary(db.Model):
     __tablename__ = 'vocabulary'
     id = db.Column(db.Integer, primary_key=True)
     lesson_number = db.Column(db.Integer, nullable=False, index=True)
     english_word = db.Column(db.String(128), nullable=False, index=True)
-    part_of_speech = db.Column(db.String(32), nullable=True) # 允许词性为空
-    chinese_translation = db.Column(db.String(256), nullable=True) # 允许中文翻译为空
-
-    # ===> 添加 source_book 字段定义 <===
-    # 类型通常是 Integer，假设你用数字代表书本
-    # nullable=False 强制要求必须有值
-    # default=2 如果大部分来自第二册，设置默认值可以简化添加逻辑
-    # index=True 如果你经常按书本筛选词汇，可以加索引
+    part_of_speech = db.Column(db.String(32), nullable=True)
+    chinese_translation = db.Column(db.String(256), nullable=True)
     source_book = db.Column(db.Integer, nullable=False, default=2, index=True)
-    # ==================================
 
-    # --- 关系定义 (如果需要) ---
+    # --- 关系：关联的错题记录 ---
     wrong_answer_associations = db.relationship(
         'WrongAnswer',
         back_populates='vocabulary_item',
         lazy='dynamic',
-        cascade='all, delete-orphan'
+        cascade='all, delete-orphan' # 删除词汇时也删除相关的错题记录
     )
-    # -------------------------
+
+    # --- 新增关系：收藏了该词汇的用户 ---
+    # 通过 user_favorite_vocabulary 中间表连接到 User
+    favorited_by_users = db.relationship(
+        'User',
+        secondary='user_favorite_vocabulary', # 指定中间表的名称
+        lazy='dynamic',                       # 返回查询对象
+        back_populates='favorite_vocabularies' # 与 User.favorite_vocabularies 关联
+        # 删除词汇时，中间表的记录应该也会级联删除（取决于数据库外键设置）
+        # 或者通过事件监听器处理
+    )
+    # --- 结束新增关系 ---
+
+
+    # --- 新增：检查当前用户是否收藏了此词汇的方法 (方便模板使用) ---
+    def is_favorited_by(self, user):
+        if not user or not user.is_authenticated:
+             return False
+         # 使用 SQLAlchemy 的 any() 或 count() 方法在关系上进行高效查询
+        # .any() 检查是否存在至少一个匹配项
+        return db.session.query(UserFavoriteVocabulary.query.filter_by(
+            user_id=user.id,
+            vocabulary_id=self.id
+        ).exists()).scalar()
+        # 或者，如果关系已经加载了一部分:
+        # return any(fav.id == user.id for fav in self.favorited_by_users) # 效率较低如果关系未加载
+    # --- 结束新增方法 ---
 
     def __repr__(self):
-        return f'<Vocabulary L{self.lesson_number} Book{self.source_book}: {self.english_word}>' # 在 repr 中也加上
+        return f'<Vocabulary L{self.lesson_number} Book{self.source_book}: {self.english_word}>'
 
-# --- 同样，QuizAttempt 模型也需要 back_populates ---
+
+class WrongAnswer(db.Model):
+    __tablename__ = 'wrong_answer'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    vocabulary_id = db.Column(db.Integer, db.ForeignKey('vocabulary.id'), nullable=False, index=True)
+    timestamp_first_wrong = db.Column(db.DateTime, index=True, default=datetime.utcnow)
+    timestamp_last_wrong = db.Column(db.DateTime, index=True, default=datetime.utcnow)
+    incorrect_count = db.Column(db.Integer, default=1)
+    is_marked = db.Column(db.Boolean, default=False, nullable=False, index=True)
+    category = db.Column(db.String(50), nullable=True, index=True)
+
+    # --- 关系：指向 User ---
+    user = db.relationship(
+        'User',
+        back_populates='wrong_answers'
+    )
+
+    # --- 关系：指向 Vocabulary ---
+    vocabulary_item = db.relationship(
+        'Vocabulary',
+        back_populates='wrong_answer_associations'
+    )
+
+    def __repr__(self):
+        return f'<WrongAnswer User {self.user_id} Vocab {self.vocabulary_id} Marked: {self.is_marked} Cat: {self.category}>'
+
+
 class QuizAttempt(db.Model):
     __tablename__ = 'quiz_attempt'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
-    lessons_attempted = db.Column(db.String(256)) # 逗号分隔的 lesson numbers
+    lessons_attempted = db.Column(db.String(256))
     score = db.Column(db.Integer, nullable=False)
     total_questions = db.Column(db.Integer, nullable=False)
-    quiz_type = db.Column(db.String(20)) # e.g., 'cn_to_en', 'en_to_cn'
+    quiz_type = db.Column(db.String(20))
     timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow)
 
+    # --- 关系：指向 User ---
     user = db.relationship(
         'User',
-        back_populates='quiz_attempts' # 指向 User.quiz_attempts
+        back_populates='quiz_attempts'
     )
 
     def __repr__(self):
         return f'<QuizAttempt User {self.user_id} Score {self.score}/{self.total_questions} on {self.timestamp}>'
 
+
 class Lesson(db.Model):
+    __tablename__ = 'lesson' # 明确表名
     id = db.Column(db.Integer, primary_key=True)
     lesson_number = db.Column(db.Integer, nullable=False, index=True)
     source_book = db.Column(db.Integer, nullable=False, default=2, index=True)
-    # 标题信息 (Title Information)
-    title_en = db.Column(db.String(255), nullable=True) # 英文标题
-    title_cn = db.Column(db.String(255), nullable=True) # 中文标题
-    # 课文内容 (Text Content) - 使用 Text 类型存储较长文本
-    text_en = db.Column(db.Text, nullable=True) # 英文课文
-    text_cn = db.Column(db.Text, nullable=True) # 中文译文
+    title_en = db.Column(db.String(255), nullable=True)
+    title_cn = db.Column(db.String(255), nullable=True)
+    text_en = db.Column(db.Text, nullable=True)
+    text_cn = db.Column(db.Text, nullable=True)
 
-    # 确保同一本书的课程序号是唯一的
     __table_args__ = (db.UniqueConstraint('lesson_number', 'source_book', name='_lesson_book_uc'),)
 
     def __repr__(self):
-        # 定义对象打印时的表示形式
         return f'<Lesson {self.source_book}-{self.lesson_number}: {self.title_en}>'
