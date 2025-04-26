@@ -283,25 +283,208 @@ def get_quiz():
 
 
 @current_app.route('/api/submit_quiz', methods=['POST'])
-@login_required
+@login_required # Ensure user is logged in
 def submit_quiz_results():
-    """API endpoint to receive and process quiz results."""
-    # ... (Keep existing submit_quiz_results logic as before) ...
-    # This function saves QuizAttempt and updates/creates WrongAnswer records.
-    # No changes needed here for the favorites feature itself.
-    # Ensure all its logic for scoring and DB operations is correct.
-    # Placeholder for brevity, use your previous full implementation.
+    """
+    Receives quiz results (JSON), scores them server-side, saves attempt and wrong answers.
+    Returns scoring results (JSON). Includes extensive debugging logs.
+    """
+    user_id_for_logs = current_user.id if current_user else 'Unknown'
+    print(f"\n--- submit_quiz_results for User {user_id_for_logs} START ---") # Start marker
+
+    # --- 1. Get and Validate Input Data ---
     data = request.get_json()
-    if not data or 'answers' not in data or 'quiz_context' not in data:
-        return jsonify({'error': 'Invalid data format.'}), 400
-    # ... (Full scoring, QuizAttempt saving, WrongAnswer saving logic) ...
-    current_app.logger.debug("submit_quiz_results called (logic assumed complete).")
-    # Replace with actual results based on scoring
-    placeholder_results = {
-        'message': 'Results processed (placeholder).',
-        'score': 0, 'total_questions': 0, 'wrong_answers': []
-    }
-    return jsonify(placeholder_results), 200 # Return actual results
+    if not data or not isinstance(data.get('answers'), dict) or not isinstance(data.get('quiz_context'), dict):
+        print(f"DEBUG User {user_id_for_logs}: Invalid data format received: {data}")
+        current_app.logger.warning(f"Submit quiz from user {user_id_for_logs}: Invalid data format received.")
+        return jsonify({'error': 'Invalid data format received.'}), 400
+
+    user_answers = data.get('answers', {})
+    quiz_context = data.get('quiz_context', {})
+    print(f"DEBUG User {user_id_for_logs}: Received answers: {user_answers}")
+    print(f"DEBUG User {user_id_for_logs}: Received quiz_context: {quiz_context}")
+
+    # --- Extract Context Info ---
+    question_ids_str = quiz_context.get('question_ids', [])
+    quiz_type = quiz_context.get('quiz_type', 'cn_to_en') # Default cn_to_en
+    lesson_ids = quiz_context.get('lesson_ids', []) # Keep lesson_ids
+
+    # --- Convert and Validate Question IDs ---
+    try:
+        # Ensure question_ids are converted to integers
+        question_ids = [int(qid) for qid in question_ids_str if str(qid).isdigit()]
+        print(f"DEBUG User {user_id_for_logs}: Parsed question_ids: {question_ids}") # Log parsed IDs
+    except (ValueError, TypeError) as e:
+         print(f"DEBUG User {user_id_for_logs}: Invalid question IDs format: {question_ids_str}. Error: {e}")
+         current_app.logger.warning(f"Submit quiz from user {user_id_for_logs}: Invalid question IDs format: {question_ids_str}. Error: {e}")
+         return jsonify({'error': 'Invalid question ID format received.'}), 400
+
+    # --- Check if we have questions to process ---
+    if not question_ids: # Check if the list is empty after parsing
+         print(f"DEBUG User {user_id_for_logs}: No valid question IDs found after parsing/validation.")
+         current_app.logger.warning(f"Submit quiz from user {user_id_for_logs}: No valid question IDs received.")
+         return jsonify({
+             'message': 'No valid questions to process.',
+             'score': 0,
+             'total_questions': 0,
+             'wrong_answers': []
+         }), 200 # Return 0/0 if no questions
+
+    current_app.logger.info(f"Processing quiz submission for user {user_id_for_logs}. Context: {quiz_context}. Answers received for {len(user_answers)} items.")
+
+    # --- 2. Server-side Scoring and Wrong Answer Tracking ---
+    total_questions = len(question_ids) # Base total on the question IDs received
+    score = 0                           # Initialize score
+    wrong_answer_details_for_response = []
+    wrong_answer_ids_to_save = set()
+
+    print(f"DEBUG User {user_id_for_logs}: Initial total_questions based on context: {total_questions}")
+
+    try:
+        # --- Fetch Vocabulary Items from Database ---
+        print(f"DEBUG User {user_id_for_logs}: Querying DB for vocab items with IDs: {question_ids}")
+        vocab_items = Vocabulary.query.filter(Vocabulary.id.in_(question_ids)).all()
+        print(f"DEBUG User {user_id_for_logs}: Found {len(vocab_items)} vocab items in DB.")
+        # Optional: Print details of found items if needed for deeper debugging
+        # for item in vocab_items: print(f"  - Found DB item: ID={item.id}, Word='{item.english_word}'")
+
+        # --- Adjust total_questions if DB query returned fewer items ---
+        if len(vocab_items) != len(question_ids):
+             print(f"DEBUG User {user_id_for_logs}: WARNING - Mismatch! Expected {len(question_ids)} questions based on context, but found {len(vocab_items)} in DB.")
+             total_questions = len(vocab_items) # Adjust total to actual items found for scoring
+             print(f"DEBUG User {user_id_for_logs}: Adjusted total_questions to: {total_questions}")
+             if total_questions == 0:
+                 print(f"DEBUG User {user_id_for_logs}: No matching vocab items found in DB. Returning 0/0 score.")
+                 # If no items found, return 0 score now, maybe save attempt later or not
+                 return jsonify({
+                     'message': 'No matching vocabulary found for scoring.',
+                     'score': 0,
+                     'total_questions': 0,
+                     'wrong_answers': []
+                 }), 200 # Still a successful process, just no score
+
+        # --- Build Vocabulary Map for Efficient Lookup ---
+        vocab_map = {item.id: item for item in vocab_items}
+        print(f"DEBUG User {user_id_for_logs}: Built vocab_map with {len(vocab_map)} items.")
+
+        # --- Iterate Through User Answers for Scoring ---
+        print(f"DEBUG User {user_id_for_logs}: Starting scoring loop for {len(user_answers)} submitted answers...")
+        for vocab_id_str, user_answer in user_answers.items():
+            try:
+                vocab_id = int(vocab_id_str)
+                print(f"  - Processing answer for vocab_id: {vocab_id}")
+                if vocab_id in vocab_map:
+                    item = vocab_map[vocab_id]
+                    correct_answer = item.english_word if quiz_type == 'cn_to_en' else item.chinese_translation
+                    user_answer_cleaned = user_answer.strip() if isinstance(user_answer, str) else ""
+
+                    print(f"    User Answer (cleaned): '{user_answer_cleaned}'")
+                    print(f"    Correct Answer:        '{correct_answer}'")
+
+                    # Core Scoring Comparison (case-insensitive)
+                    is_correct = user_answer_cleaned.lower() == correct_answer.lower()
+                    print(f"    Comparison Result: {is_correct}")
+
+                    if is_correct:
+                        score += 1
+                        print(f"    Score increased to: {score}")
+                    else:
+                        wrong_answer_ids_to_save.add(vocab_id)
+                        wrong_answer_details_for_response.append({
+                            'vocab_id': vocab_id,
+                            'question': item.chinese_translation if quiz_type == 'cn_to_en' else item.english_word,
+                            'part_of_speech': item.part_of_speech,
+                            'user_answer': user_answer, # Keep original answer for display
+                            'correct_answer': correct_answer
+                        })
+                        print(f"    Marked as incorrect. wrong_answer_ids_to_save: {wrong_answer_ids_to_save}")
+                else:
+                    # This case means user submitted an answer for an ID that wasn't in the fetched items
+                    print(f"  - WARNING: Submitted answer for vocab_id {vocab_id}, but it was not found in the fetched vocab_map!")
+                    current_app.logger.warning(f"User {user_id_for_logs}: Submitted answer for vocab_id {vocab_id} which was not in the fetched items for this quiz.")
+            except ValueError:
+                 print(f"  - ERROR: Invalid vocab ID format in user answers: '{vocab_id_str}'")
+                 current_app.logger.warning(f"User {user_id_for_logs}: Invalid vocab ID format in user answers: {vocab_id_str}")
+            except Exception as scoring_ex:
+                 print(f"  - ERROR: Exception during scoring loop for vocab_id '{vocab_id_str}': {scoring_ex}")
+                 current_app.logger.error(f"User {user_id_for_logs}: Error scoring question vocab_id={vocab_id_str}: {scoring_ex}", exc_info=True)
+        print(f"DEBUG User {user_id_for_logs}: Scoring loop finished.")
+        print(f"DEBUG User {user_id_for_logs}: Final score before commit: {score}")
+        print(f"DEBUG User {user_id_for_logs}: Final total_questions before commit: {total_questions}") # Based on items found in DB
+
+        # --- 3. Save Quiz Attempt Record ---
+        print(f"DEBUG User {user_id_for_logs}: Preparing to save QuizAttempt...")
+        attempt = QuizAttempt(
+            user_id=current_user.id,
+            lessons_attempted=",".join(map(str, sorted(list(set(lesson_ids))))) if lesson_ids else "",
+            score=score,
+            total_questions=total_questions, # Use the potentially adjusted total_questions
+            quiz_type=quiz_type
+        )
+        db.session.add(attempt)
+        print(f"DEBUG User {user_id_for_logs}: QuizAttempt object created and added to session.")
+
+        # --- 4. Update/Save Wrong Answers ---
+        print(f"DEBUG User {user_id_for_logs}: Preparing to update/save {len(wrong_answer_ids_to_save)} wrong answers...")
+        now = datetime.utcnow()
+        if wrong_answer_ids_to_save:
+            # ... (Keep the existing logic for finding existing wrongs and updating/creating new ones) ...
+             # Query existing wrong answers for these specific vocab IDs for this user
+            existing_wrongs = WrongAnswer.query.filter(
+                WrongAnswer.user_id == current_user.id,
+                WrongAnswer.vocabulary_id.in_(wrong_answer_ids_to_save)
+            ).all()
+            existing_wrongs_map = {wrong.vocabulary_id: wrong for wrong in existing_wrongs}
+            print(f"DEBUG User {user_id_for_logs}: Found {len(existing_wrongs_map)} existing wrong answers to update.")
+
+            for vocab_id in wrong_answer_ids_to_save:
+                if vocab_id in vocab_map: # Ensure vocab data still exists
+                    if vocab_id in existing_wrongs_map:
+                        # Update existing record
+                        wrong_record = existing_wrongs_map[vocab_id]
+                        wrong_record.timestamp_last_wrong = now
+                        wrong_record.incorrect_count = (wrong_record.incorrect_count or 0) + 1
+                        db.session.add(wrong_record) # Add to session for update
+                        print(f"  - Updating existing wrong answer for vocab_id {vocab_id}")
+                    else:
+                        # Create new record
+                        new_wrong = WrongAnswer(
+                            user_id=current_user.id,
+                            vocabulary_id=vocab_id,
+                            timestamp_last_wrong=now,
+                            incorrect_count=1
+                        )
+                        db.session.add(new_wrong)
+                        print(f"  - Creating new wrong answer for vocab_id {vocab_id}")
+                else:
+                     print(f"  - WARNING: Cannot save wrong answer for vocab_id {vocab_id} as it's not in vocab_map.")
+        else:
+            print(f"DEBUG User {user_id_for_logs}: No wrong answers to save/update.")
+
+
+        # --- 5. Commit Database Transaction ---
+        print(f"DEBUG User {user_id_for_logs}: Attempting db.session.commit()...")
+        db.session.commit()
+        print(f"DEBUG User {user_id_for_logs}: Database commit successful.")
+        current_app.logger.info(f"User {user_id_for_logs}: Quiz results processing complete and committed. Score: {score}/{total_questions}")
+
+        # --- 6. Return Results to Frontend ---
+        print(f"DEBUG User {user_id_for_logs}: Returning score: {score}, total_questions: {total_questions}")
+        return jsonify({
+            'message': '测验结果已成功保存。(Results saved successfully.)',
+            'score': score,
+            'total_questions': total_questions, # Return the potentially adjusted total_questions
+            'wrong_answers': wrong_answer_details_for_response
+        }), 200
+
+    except Exception as e:
+        # --- Catch any exception during the process ---
+        db.session.rollback() # Rollback any potential DB changes
+        print(f"DEBUG User {user_id_for_logs}: EXCEPTION occurred: {e}")
+        current_app.logger.error(f"User {user_id_for_logs}: Critical error processing quiz results: {e}", exc_info=True)
+        return jsonify({'error': f'处理测验结果时发生内部错误: {str(e)}'}), 500
+    finally:
+        print(f"--- submit_quiz_results for User {user_id_for_logs} END ---") # End marker
 
 
 @current_app.route('/api/vocabulary/<int:vocabulary_id>/toggle_favorite', methods=['POST'])
