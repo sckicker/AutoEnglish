@@ -68,7 +68,11 @@ class Config:
     # ----------------------------------
     # --- 新增：用户录音保存文件夹 ---
     # 放在 instance 文件夹下比较合适，因为它属于运行时生成的数据，且不应提交到 Git
-    USER_RECORDINGS_FOLDER = os.environ.get('USER_RECORDINGS_FOLDER') or os.path.join(basedir, 'instance', 'user_recordings')
+    # --- 修改：用户录音基础目录 ---
+    # 指向所有用户录音存放的根目录 (仍然建议在 instance 下)
+    USER_RECORDINGS_BASE_FOLDER = os.environ.get('USER_RECORDINGS_BASE_FOLDER') or os.path.join(basedir, 'instance', 'user_recordings')
+    # 打印确认路径
+    print(f"Configured USER_RECORDINGS_BASE_FOLDER: {USER_RECORDINGS_BASE_FOLDER}")
 
     # --- PDF 路径配置 ---
     # NCE 课程 PDF 文件的路径，从环境变量读取，提供默认路径

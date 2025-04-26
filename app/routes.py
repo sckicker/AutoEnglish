@@ -64,70 +64,68 @@ def view_lessons():
     now = datetime.utcnow()
     return render_template('lessons_list.html', title='课程列表 (Lesson List)', lessons=lessons_data, current_time=now)
 
-# app/routes.py
-import os
-from flask import render_template, url_for, current_app, send_from_directory # 导入 send_from_directory
-# ... 其他导入 ...
 
 @current_app.route('/lesson/<int:lesson_number>')
 @login_required
 def view_lesson(lesson_number):
-    """显示指定 Lesson 的课文内容，并检查音频文件。"""
-    # ... (获取 lesson_data) ...
+    """显示指定 Lesson 的课文内容，并检查音频文件（预生成和用户录音）。"""
+    current_app.logger.info(f"Request received for lesson {lesson_number} by user {current_user.id}")
     lesson_data = Lesson.query.filter_by(lesson_number=lesson_number, source_book=2).first_or_404()
 
-    # --- 修改：使用新配置查找预生成音频 ---
+    # --- 查找预生成音频 (逻辑保持不变，使用 PREGENERATED_AUDIO_FOLDER) ---
     pregen_audio_url = None
-    audio_folder = current_app.config.get('PREGENERATED_AUDIO_FOLDER') # 获取绝对路径
+    audio_folder = current_app.config.get('PREGENERATED_AUDIO_FOLDER')
     filename_template = current_app.config.get('PREGENERATED_AUDIO_FILENAME_TEMPLATE', 'lesson_{lesson_number}.{ext}')
     possible_extensions = current_app.config.get('PREGENERATED_AUDIO_EXTENSIONS', ['.wav'])
-
-    found_filename = None # 存储找到的文件名
-
-    if audio_folder: # 确保配置了文件夹路径
+    if audio_folder:
         for ext in possible_extensions:
             clean_ext = ext.lstrip('.')
             try:
                 filename = filename_template.format(lesson_number=lesson_number, ext=clean_ext)
-                absolute_filepath = os.path.join(audio_folder, filename) # 直接构造绝对路径
-
+                absolute_filepath = os.path.join(audio_folder, filename)
                 current_app.logger.debug(f"Checking for pre-generated audio at: {absolute_filepath}")
                 if os.path.exists(absolute_filepath):
-                    # 如果文件存在，生成指向 *新路由* 的 URL
-                    pregen_audio_url = url_for('get_pregenerated_audio', lesson_number=lesson_number, filename=filename) # <--- 指向新路由
-                    found_filename = filename # 记录找到的文件名，虽然下面的路由不需要它
+                    pregen_audio_url = url_for('get_pregenerated_audio', lesson_number=lesson_number, filename=filename)
                     current_app.logger.info(f"Found pre-generated audio file: {filename}, URL: {pregen_audio_url}")
                     break
-            except KeyError as e:
-                 current_app.logger.error(f"Filename template error: Missing key {e}")
-                 break
-            except Exception as e:
-                 current_app.logger.error(f"Error checking pre-generated audio file '{filename}': {e}", exc_info=True)
-    else:
-         current_app.logger.warning("PREGENERATED_AUDIO_FOLDER not configured.")
-    # --- 结束查找 ---
+            except KeyError as e: current_app.logger.error(f"Filename template error: {e}"); break
+            except Exception as e: current_app.logger.error(f"Error check pre-gen audio '{filename}': {e}", exc_info=True)
+    else: current_app.logger.warning("PREGENERATED_AUDIO_FOLDER not configured.")
+    # --- 结束查找预生成音频 ---
 
-    # --- 检查用户之前的录音 (确保这部分逻辑还在) ---
+    # --- 修改：检查用户之前的录音（匹配新的目录结构） ---
     user_recording_url = None
-    recordings_folder = current_app.config['USER_RECORDINGS_FOLDER']
-    user_rec_extensions = ['.webm', '.ogg', '.wav']  # 与上传/获取逻辑一致
-    for ext in user_rec_extensions:
-        filename = f"user_{current_user.id}_lesson_{lesson_number}{ext}"
-        filepath = os.path.join(recordings_folder, filename)
-        if os.path.exists(filepath):
-            # 确保 get_user_recording 路由存在且能找到文件
-            user_recording_url = url_for('get_user_recording', user_id=current_user.id, lesson_number=lesson_number)
-            current_app.logger.info(
-                f"Found previous user recording for user {current_user.id}, lesson {lesson_number}.")
-            break
-    # --- 结束检查 ---
+    # 1. 获取基础录音目录
+    base_recordings_folder = current_app.config.get('USER_RECORDINGS_BASE_FOLDER')
+    if base_recordings_folder:
+        # 2. 构建当前用户的专属子目录路径
+        user_specific_folder = os.path.join(base_recordings_folder, f"user_{current_user.id}")
+        current_app.logger.debug(f"Checking for user recording in: {user_specific_folder}")
+
+        # 3. 在用户专属子目录中查找文件
+        user_rec_extensions = ['.webm', '.ogg', '.wav'] # 与上传/获取逻辑一致
+        for ext in user_rec_extensions:
+            # 4. 文件名只包含课程号和扩展名
+            filename = f"lesson_{lesson_number}{ext}"
+            filepath = os.path.join(user_specific_folder, filename) # 检查的绝对路径
+
+            current_app.logger.debug(f"Checking for user recording file at: {filepath}")
+            if os.path.exists(filepath):
+                # 5. 如果文件存在，生成指向 get_user_recording 路由的 URL
+                #    该路由知道如何根据 user_id 和 lesson_number 找到正确的子目录和文件
+                user_recording_url = url_for('get_user_recording', user_id=current_user.id, lesson_number=lesson_number)
+                current_app.logger.info(f"Found previous user recording file: {filename} in user's folder. URL: {user_recording_url}")
+                break # 找到一个就停止
+    else:
+        current_app.logger.warning("USER_RECORDINGS_BASE_FOLDER not configured.")
+    # --- 结束修改 ---
 
     now = datetime.utcnow()
     return render_template('lesson_text.html',
                            lesson=lesson_data,
                            current_time=now,
-                           audio_url=pregen_audio_url, # 传递预生成音频 URL
-                           user_recording_audio_url=user_recording_url)
+                           audio_url=pregen_audio_url, # 预生成音频 URL
+                           user_recording_audio_url=user_recording_url) # 用户录音 URL
 
 
 # === 新增：提供预生成音频文件的路由 ===
@@ -868,85 +866,92 @@ def speak_lesson_text(lesson_number):
          log.error(f"Error sending audio file {generated_path}: {e}")
          return jsonify({"error": "Could not send audio file."}), 500
 
-# === 新增：处理用户录音上传的 API ===
+# === 修改：处理用户录音上传的 API ===
 @current_app.route('/api/lesson/<int:lesson_number>/upload_recording', methods=['POST'])
 @login_required
 def upload_user_recording(lesson_number):
-    """接收用户对特定课程的录音并保存（覆盖旧的）。"""
+    """接收用户对特定课程的录音并保存到用户专属目录（覆盖旧的）。"""
     user_id = current_user.id
-    current_app.logger.info(f"Received recording upload request for lesson {lesson_number} from user {user_id}")
+    current_app.logger.info(f"Upload request for lesson {lesson_number} from user {user_id}")
 
-    # --- 1. 检查文件是否存在于请求中 ---
-    if 'audio_data' not in request.files:
-        current_app.logger.warning(f"No 'audio_data' file part in request from user {user_id}")
-        return jsonify({'success': False, 'error': '缺少音频数据 (No audio_data part)'}), 400
-
+    # --- 1. 检查文件 ---
+    if 'audio_data' not in request.files: return jsonify({'error': 'No audio_data part'}), 400
     file = request.files['audio_data']
+    if file.filename == '': return jsonify({'error': 'No selected file'}), 400
 
-    # --- 2. 检查文件名（虽然我们不用它，但检查下是否为空）---
-    if file.filename == '':
-        current_app.logger.warning(f"No selected file (empty filename) from user {user_id}")
-        return jsonify({'success': False, 'error': '没有选择文件 (No selected file)'}), 400
+    # --- 2. (可选) 检查课程 ---
+    #lesson = Lesson.query.get(lesson_number)
+    #if not lesson: return jsonify({'error': 'Lesson not found'}), 404
 
-    # --- 3. (可选) 检查课程是否存在 ---
-    lesson = Lesson.query.get(lesson_number) # 或者根据 lesson_number 查询
-    if not lesson:
-         current_app.logger.warning(f"Attempt to upload recording for non-existent lesson {lesson_number} by user {user_id}")
-         return jsonify({'success': False, 'error': '课程不存在 (Lesson not found)'}), 404
+    # --- 3. 确定用户专属保存目录 ---
+    base_folder = current_app.config.get('USER_RECORDINGS_BASE_FOLDER')
+    if not base_folder: return jsonify({'error': 'User recordings base folder not configured'}), 500
+    # --- 创建用户子目录路径 ---
+    user_specific_folder = os.path.join(base_folder, f"user_{user_id}")
+    # -------------------------
 
-    # --- 4. 生成安全且固定的文件名 (实现覆盖) ---
-    # 尝试获取原始文件的扩展名，如果获取不到，则默认 .webm
-    original_filename = secure_filename(file.filename or 'audio') # 基本清理
+    # --- 4. 生成固定文件名 (课程相关) ---
+    original_filename = secure_filename(file.filename or 'audio')
     _, ext = os.path.splitext(original_filename)
-    if not ext or ext.lower() not in ['.webm', '.ogg', '.wav', '.mp3', '.m4a', '.aac']: # 限制一下可能的扩展名
-         ext = '.webm' # 默认扩展名
-         current_app.logger.warning(f"Could not determine valid extension from '{original_filename}', defaulting to '.webm'")
+    # 保留之前的扩展名推断逻辑，或者直接用上传时的MIME类型推断
+    possible_extensions = ['.webm', '.ogg', '.wav'] # 默认尝试 webm
+    if not ext or ext.lower() not in possible_extensions:
+        # 尝试从 Content-Type 获取 (如果浏览器发送了)
+        content_type = file.content_type
+        if content_type == 'audio/webm': ext = '.webm'
+        elif content_type == 'audio/ogg': ext = '.ogg'
+        elif content_type == 'audio/wav': ext = '.wav'
+        else: ext = '.webm' # 最终默认 .webm
+        current_app.logger.warning(f"Cannot determine extension reliably, using '{ext}'")
 
-    filename = f"user_{user_id}_lesson_{lesson_number}{ext}"
-    save_folder = current_app.config['USER_RECORDINGS_FOLDER']
-    filepath = os.path.join(save_folder, filename)
+    filename = f"lesson_{lesson_number}{ext}" # 文件名只包含课程号和扩展名
+    # --------------------------------
 
-    current_app.logger.info(f"Attempting to save recording to: {filepath}")
-
-    # --- 5. 保存文件 (会自动覆盖同名文件) ---
+    # --- 5. 确保用户子目录存在并保存文件 ---
     try:
-        file.save(filepath)
-        current_app.logger.info(f"Recording saved successfully: {filepath}")
-        return jsonify({'success': True, 'message': '录音已保存。(Recording saved.)'}), 200
+        os.makedirs(user_specific_folder, exist_ok=True) # 创建用户子目录（如果不存在）
+        filepath = os.path.join(user_specific_folder, filename) # 完整保存路径
+        current_app.logger.info(f"Attempting to save user recording to: {filepath}")
+        file.save(filepath) # 保存文件，会覆盖同名文件
+        current_app.logger.info(f"User recording saved successfully: {filepath}")
+        return jsonify({'success': True, 'message': '录音已保存。'}), 200
+    except OSError as e:
+         current_app.logger.error(f"Could not create directory or save file '{filepath}': {e}", exc_info=True)
+         return jsonify({'success': False, 'error': '创建目录或保存文件时出错。'}), 500
     except Exception as e:
         current_app.logger.error(f"Error saving recording file '{filepath}': {e}", exc_info=True)
-        return jsonify({'success': False, 'error': f'保存录音时出错。(Error saving recording: {e})'}), 500
+        return jsonify({'success': False, 'error': f'保存录音时出错: {e}'}), 500
 
-# === (可选) 新增：获取用户录音的 API ===
-# 这个路由允许前端获取特定用户特定课程的录音来播放
+# === 修改：获取用户录音的 API ===
 @current_app.route('/user_recording/<int:user_id>/<int:lesson_number>')
-@login_required # 可能需要检查权限，是否只有用户自己能听？
+@login_required
 def get_user_recording(user_id, lesson_number):
-    """提供用户录音文件的访问。"""
-    # 权限检查：确保只有用户自己或管理员能访问？
+    """提供特定用户特定课程的录音文件。"""
+    # --- 权限检查 (保持不变) ---
     if user_id != current_user.id and not current_user.is_admin:
-         current_app.logger.warning(f"User {current_user.id} tried to access recording for user {user_id}")
          return jsonify({"error": "Forbidden"}), 403
 
-    recordings_folder = current_app.config['USER_RECORDINGS_FOLDER']
-    # 需要知道文件的确切扩展名，或尝试查找
-    # 简单起见，先假设是 webm，或者需要改进文件名查找逻辑
-    filename = f"user_{user_id}_lesson_{lesson_number}.webm" # <--- 假设是 webm
+    # --- 确定用户专属目录 ---
+    base_folder = current_app.config.get('USER_RECORDINGS_BASE_FOLDER')
+    if not base_folder: return jsonify({"error": "User recordings base folder not configured"}), 500
+    user_specific_folder = os.path.join(base_folder, f"user_{user_id}")
+    # -------------------------
 
-    # 尝试查找其他可能的扩展名
-    possible_extensions = ['.webm', '.ogg', '.wav'] # 添加你支持的格式
+    # --- 在用户目录中查找文件 ---
+    possible_extensions = ['.webm', '.ogg', '.wav'] # 与上传逻辑匹配
     found_file = None
     for ext in possible_extensions:
-         test_filename = f"user_{user_id}_lesson_{lesson_number}{ext}"
-         if os.path.exists(os.path.join(recordings_folder, test_filename)):
-              found_file = test_filename
+         # 文件名现在只包含课程号和扩展名
+         filename = f"lesson_{lesson_number}{ext}"
+         filepath = os.path.join(user_specific_folder, filename)
+         if os.path.exists(filepath):
+              found_file = filename # 只需要文件名，send_from_directory 需要目录+文件名
               break
 
     if found_file:
-         current_app.logger.debug(f"Serving recording: {found_file} from {recordings_folder}")
-         # 使用 send_from_directory 发送文件，更安全
-         # as_attachment=False 表示在浏览器中播放而不是下载
-         return send_from_directory(recordings_folder, found_file, as_attachment=False)
+         current_app.logger.debug(f"Serving user recording: {found_file} from {user_specific_folder}")
+         # 使用 send_from_directory 发送文件
+         return send_from_directory(user_specific_folder, found_file, as_attachment=False)
     else:
-         current_app.logger.warning(f"Recording not found for user {user_id}, lesson {lesson_number}")
+         current_app.logger.warning(f"User recording not found for user {user_id}, lesson {lesson_number} in {user_specific_folder}")
          return jsonify({"error": "Recording not found"}), 404
