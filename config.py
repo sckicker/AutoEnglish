@@ -56,6 +56,20 @@ class Config:
     print(f"TTS Audio Cache Directory (relative to instance path): {TTS_AUDIO_CACHE_DIR}")
     # --- 结束 TTS 配置 ---
 
+    # --- 修改：预生成课程音频配置 ---
+    # 指向 instance 文件夹下的 tts_cache 子目录
+    PREGENERATED_AUDIO_FOLDER = os.environ.get('PREGENERATED_AUDIO_FOLDER') or os.path.join(basedir, 'instance',
+                                                                                            'tts_cache')
+    # 音频文件的命名模板 (保持不变或根据实际情况调整)
+    PREGENERATED_AUDIO_FILENAME_TEMPLATE = os.environ.get(
+        'PREGENERATED_AUDIO_FILENAME_TEMPLATE') or 'lesson_{lesson_number}.{ext}'
+    # 尝试查找的音频文件扩展名列表 (确认你的文件都是 .wav)
+    PREGENERATED_AUDIO_EXTENSIONS = ['.wav']  # 如果确定只有 wav，就只留这个
+    # ----------------------------------
+    # --- 新增：用户录音保存文件夹 ---
+    # 放在 instance 文件夹下比较合适，因为它属于运行时生成的数据，且不应提交到 Git
+    USER_RECORDINGS_FOLDER = os.environ.get('USER_RECORDINGS_FOLDER') or os.path.join(basedir, 'instance', 'user_recordings')
+
     # --- PDF 路径配置 ---
     # NCE 课程 PDF 文件的路径，从环境变量读取，提供默认路径
     default_pdf_path = os.path.join(basedir, 'uploads', 'nce_book2.pdf') # 检查此路径是否存在

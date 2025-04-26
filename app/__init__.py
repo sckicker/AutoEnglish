@@ -81,6 +81,14 @@ def create_app(config_class=Config):
     except OSError as e:
         app.logger.error(f"Could not create instance folder at {app.instance_path}: {e}")
 
+    # --- 新增：确保用户录音文件夹存在 ---
+    try:
+        recordings_folder = app.config['USER_RECORDINGS_FOLDER']
+        os.makedirs(recordings_folder, exist_ok=True)
+        app.logger.info(f"User recordings folder checked/created: {recordings_folder}")
+    except OSError as e:
+        app.logger.error(f"Could not create user recordings folder '{app.config.get('USER_RECORDINGS_FOLDER')}': {e}")
+
     # --- Initialize Flask extensions with the 'app' instance ---
     db.init_app(app)
     migrate.init_app(app, db) # Migrate needs both app and db
