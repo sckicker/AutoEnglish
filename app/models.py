@@ -186,3 +186,36 @@ class Lesson(db.Model):
 
     def __repr__(self):
         return f'<Lesson {self.source_book}-{self.lesson_number}: {self.title_en}>'
+
+
+class PronunciationScore(db.Model):
+    __tablename__ = 'pronunciation_score'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    lesson_number = db.Column(db.Integer, nullable=False, index=True) # 关联到课程号
+    # source_book = db.Column(db.Integer, default=2) # 如果需要区分书籍
+
+    # 存储评分相关的核心数据
+    final_score = db.Column(db.Float, nullable=True) # 最终总分 (0-100)
+    accuracy_score = db.Column(db.Float, nullable=True) # 准确率得分 (0-100)
+    fluency_score = db.Column(db.Float, nullable=True) # 流畅度得分 (0-100)
+    speed_score = db.Column(db.Float, nullable=True) # 语速得分 (0-100), 可选
+    recognized_text = db.Column(db.Text, nullable=True) # STT 识别出的文本
+    wer = db.Column(db.Float, nullable=True) # 词错误率 (可选)
+    speech_rate_wps = db.Column(db.Float, nullable=True) # 每秒词数 (可选)
+
+    timestamp = db.Column(db.DateTime, index=True, default=datetime.utcnow) # 评分时间
+
+    # 建立与 User 的关系
+    user = db.relationship('User', backref=db.backref('pronunciation_scores', lazy='dynamic'))
+
+    # 可以考虑添加与 Lesson 的关系，如果 Lesson 模型有 id 主键
+    # lesson_id = db.Column(db.Integer, db.ForeignKey('lesson.id'), nullable=True)
+    # lesson = db.relationship('Lesson', backref=db.backref('pronunciation_scores', lazy=True))
+
+    # 确保同一用户对同一课程只有一个最新的评分记录（或者允许多次评分？）
+    # 如果只保留最新，可以在保存新评分前删除旧的，或者添加 unique constraint
+    __table_args__ = (db.UniqueConstraint('user_id', 'lesson_number', name='uq_user_lesson_pronunciation'),) # 限制每个用户每课只有一个评分
+
+    def __repr__(self):
+        return f'<PronunciationScore User {self.user_id} Lesson {self.lesson_number} Score: {self.final_score}>'

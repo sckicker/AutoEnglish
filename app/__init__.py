@@ -12,6 +12,7 @@ from flask_wtf.csrf import CSRFProtect
 from datetime import datetime # Import datetime
 
 from config import Config # Import your Config class
+from .scoring_utils import load_whisper_model # 导入模型加载函数
 
 # --- Instantiate extensions ---
 # Define extension instances at the module level so they can be imported elsewhere if needed
@@ -130,6 +131,10 @@ def create_app(config_class=Config):
 
     except Exception as log_setup_error:
          app.logger.error(f"Failed to configure logging: {log_setup_error}", exc_info=True)
+
+    with app.app_context():
+        load_whisper_model(app.config.get('WHISPER_MODEL_SIZE', 'small'))  # 从配置加载模型大小，默认为 base.en
+    app.logger.info("Flask app instance created, configured, and model loaded.")
     # ------------------------
 
     # --- Context Processors (Inject variables into all templates) ---

@@ -1,67 +1,58 @@
-{# app/templates/lesson_text.html V1.14 - Integrated Recording & Improved Quiz Logic Interaction #}
-{% extends "base.html" %} {# 继承基础模板 #}
-
-{# 设置页面标题 #}
+{# app/templates/lesson_text.html V1.16 - Manual Scoring Trigger & History #}
+{% extends "base.html" %}
 {% block title %}Lesson {{ lesson.lesson_number }} - {{ lesson.title_en or 'Lesson Text' }}{% endblock %}
 
 {% block content %}
-{# --- 1. 增强型标题区域 --- #}
-<div class="p-4 p-md-5 mb-4 rounded-3 bg-light shadow-sm border-start border-primary border-5">
-    <div class="container-fluid py-3">
-        <h1 class="display-5 fw-bold">Lesson {{ lesson.lesson_number }}: {{ lesson.title_en or 'Unknown Title' }}</h1>
-        {% if lesson.title_cn %}
-            <p class="fs-4 text-muted">{{ lesson.title_cn }}</p>
-        {% endif %}
-    </div>
-</div>
+{# --- 1. 标题区域 --- #}
+{# ... (保持不变) ... #}
 
 {# --- 2. 英文课文、音频和录音主区域 --- #}
 <div class="p-4 border rounded-3 bg-white shadow mb-4">
     <h3 class="mb-4 pb-2 border-bottom"><i class="bi bi-file-earmark-text-fill"></i> 英文课文与跟读练习</h3>
-
-    {# --- 音频和录音控件行 --- #}
     <div class="row g-3 mb-4 align-items-center">
         {# 预生成音频播放器 #}
         <div class="col-md-6">
-            {% if audio_url %}
-                <div id="lesson-audio-player"> {# 可以保留外层 div 的 ID，如果其他地方用到的话 #}
-                    <label class="form-label small fw-bold">课程音频:</label>
-                    {# --- 给 audio 标签添加 ID --- #}
-                    <audio id="pre-generated-audio-player" controls preload="metadata" class="w-100" title="播放预生成的课程音频">
-                        <source src="{{ audio_url }}" type="audio/wav"> {# 确认 audio_url 被正确传递 #}
-                        你的浏览器不支持播放 WAV 音频。
-                    </audio>
-                    {# --- 结束添加 ID --- #}
-                </div>
-            {% else %}
-                <div class="text-muted small"><i class="bi bi-exclamation-circle"></i> 暂无预生成音频。</div>
-            {% endif %}
+             {% if audio_url %}
+                 <div id="lesson-audio-wrapper">
+                     <label class="form-label small fw-bold">课程音频:</label>
+                     <audio id="pre-generated-audio-player" controls preload="metadata" class="w-100" title="播放预生成的课程音频">
+                         <source src="{{ audio_url }}" type="{{ 'audio/mpeg' if audio_url.endswith('.mp3') else 'audio/wav' }}"> {# 简单判断类型 #}
+                         你的浏览器不支持音频播放。
+                     </audio>
+                 </div>
+             {% else %}
+                 <div class="text-muted small"><i class="bi bi-exclamation-circle"></i> 暂无课程音频。</div>
+             {% endif %}
         </div>
-        {# 用户录音控件 #}
+        {# 用户录音控件与评分显示区域 #}
         <div class="col-md-6">
-             <div class="p-3 border rounded-2 bg-light-subtle h-100">
-                <label class="form-label small fw-bold">跟读录音:</label>
-                <div class="d-flex align-items-center mb-2">
-                    <button id="record-button" class="btn btn-danger btn-sm me-2"><i class="bi bi-mic-fill"></i> 开始录音</button>
-                    <span id="recording-status" class="text-muted small flex-grow-1"></span>
+             <div class="p-3 border rounded-2 bg-light-subtle h-100 d-flex flex-column">
+                <div> {# Group recording controls #}
+                    <label class="form-label small fw-bold">跟读录音:</label>
+                    <div class="d-flex align-items-center mb-2">
+                        <button id="record-button" class="btn btn-danger btn-sm me-2"><i class="bi bi-mic-fill"></i> 开始录音</button>
+                        {# --- 新增：获取评分按钮 (初始隐藏) --- #}
+                        <button id="score-recording-btn" class="btn btn-warning btn-sm me-2 hidden" data-lesson-number="{{ lesson.lesson_number }}"><i class="bi bi-robot"></i> 获取评分</button>
+                        {# --------------------------------- #}
+                        <span id="recording-status" class="text-muted small flex-grow-1"></span>
+                    </div>
+                    <div id="user-recording-playback" style="min-height: 40px;">
+                         {# JS 会在这里添加 audio 元素 或 "暂无之前录音" 提示 #}
+                    </div>
                 </div>
-                <div id="user-recording-playback" style="min-height: 40px;"></div>
+                {# --- 修改：评分结果显示区域 (用于显示历史评分或新评分) --- #}
+                <div id="user-recording-score" class="mt-auto pt-2 border-top border-2 border-light">
+                    {# 初始内容由 JS 根据 previous_score 填充 #}
+                </div>
+                {# --- 结束修改 --- #}
             </div>
         </div>
     </div>
-
     {# --- 英文课文内容 --- #}
-    {# 应用拟物化纸张样式 #}
     <div class="lesson-text english-text preserve-newlines border-top pt-3" id="english-text-content">
-        {% if lesson.text_en %}
-             {{ lesson.text_en }}
-        {% else %}
-            <p class="text-muted"><em>English text not available.</em></p>
-        {% endif %}
+        {% if lesson.text_en %} {{ lesson.text_en }} {% else %} <p>...</p> {% endif %}
     </div>
 </div>
-{# --- 英文区域结束 --- #}
-
 
 {# --- 3. 操作按钮区域 --- #}
 <div class="mb-4 pt-3 text-center border-top">
@@ -74,7 +65,6 @@
     <div id="quiz-area" class="hidden p-3 border rounded bg-light shadow-sm">
          <h2 class="text-center mb-4">Lesson {{ lesson.lesson_number }} 词汇测试进行中...</h2>
          <div id="questions-container"></div>
-         {# Note: submit-quiz-btn listener is attached by quiz_logic.js #}
          <div class="text-center"><button type="button" id="submit-quiz-btn" class="btn btn-primary hidden mt-3">提交答案</button></div>
     </div>
     <div id="results-area" class="hidden mt-4 p-3 border rounded bg-light shadow-sm">
@@ -110,6 +100,7 @@
 {# --- 中文区域结束 --- #}
 
 {% endblock %}
+
 
 {# --- 特定页面 CSS (修正背景平铺问题) --- #}
 {% block styles_extra %}
@@ -195,7 +186,9 @@
     let textToSpeakElement = null;
     let startLessonQuizBtn = null;
     let restartQuizBtn = null; // 注意：这个元素在 results-area 内部，初始可能不存在
-    // quizArea, resultsArea 等由 quiz_logic.js 获取和管理
+    let scoreRecordingBtn = null; // 添加 scoreRecordingBtn
+    let scoreDisplayArea = null; // 添加评分显示区域变量
+    // quizArea, resultsArea 由 quiz_logic.js 获取和管理
 
     // --- DOMContentLoaded Listener: 获取元素并调用初始化函数 ---
     document.addEventListener('DOMContentLoaded', () => {
@@ -205,7 +198,7 @@
         recordButton = document.getElementById('record-button');
         recordingStatus = document.getElementById('recording-status');
         audioPlaybackContainer = document.getElementById('user-recording-playback');
-        preGeneratedAudio = document.getElementById('pre-generated-audio-player');
+        preGeneratedAudio = document.getElementById('pre-generated-audio-player'); // 使用 ID 获取
         speakButton = document.getElementById('speak-button'); // 可能为 null
         voiceSelect = document.getElementById('voice-select'); // 可能为 null
         textToSpeakElement = document.getElementById('english-text-content'); // 应该存在
@@ -214,6 +207,7 @@
         restartQuizBtn = document.getElementById('restart-quiz-btn');
 
         console.log("DOM elements potentially assigned. Checking availability...");
+
 
         // === 新增：检查并加载之前的录音 ===
         const previousRecordingUrl = "{{ user_recording_audio_url or '' }}"; // 从后端获取 URL
@@ -232,16 +226,15 @@
 
                 audioPlaybackContainer.innerHTML = ''; // 清空容器
                 audioPlaybackContainer.appendChild(audioElement); // 添加播放器
-                console.log("Previous recording player added.");
+                console.log("Previous user recording player added.");
             } catch(e) {
                 console.error("Error creating player for previous recording:", e);
             }
         } else if (audioPlaybackContainer) {
-            // 如果没有找到之前的录音，确保播放区域是空的或显示提示
-            // audioPlaybackContainer.innerHTML = '<p class="text-muted small m-0">暂无之前的录音。</p>';
-             console.log("No previous recording URL found.");
+             console.log("No previous user recording URL found.");
         }
         // === 结束加载之前的录音 ===
+
 
         // === 2. 在获取元素之后，再调用初始化函数，并进行检查 ===
 
@@ -301,10 +294,85 @@
             preGeneratedAudio.addEventListener('ended', handleAudioStop);
              console.log("Event listeners attached to pre-generated audio player.");
         } else {
-             console.log("Pre-generated audio player element not found after DOM loaded.");
+             console.log("Pre-generated audio player element (#pre-generated-audio-player) not found after DOM loaded.");
         }
 
         console.log("lesson_text.html: DOMContentLoaded handler finished setup.");
+
+        scoreRecordingBtn = document.getElementById('score-recording-btn');
+        scoreDisplayArea = document.getElementById('user-recording-score'); // 获取评分显示区域
+        // --- 修改：检查并加载之前的评分 ---
+        const previousScoreJson = '{{ previous_score | tojson | safe if previous_score else "null" }}';
+        let previousScoreData = null;
+        try {
+            previousScoreData = JSON.parse(previousScoreJson);
+        } catch (e) { console.error("Error parsing previous score JSON:", e); }
+
+        if (previousScoreData && scoreDisplayArea) {
+             console.log("Previous score found, displaying:", previousScoreData);
+             // 使用与 triggerProcessingAndScoring 中类似的 HTML 结构显示历史评分
+             let scoreDetailsHtml = `
+                 <div class="alert alert-secondary mt-3"> {# 用灰色表示历史记录 #}
+                     <h5 class="alert-heading mb-2">上次评分结果 <small class="text-muted fw-normal">(${previousScoreData.timestamp ?? '未知时间'})</small></h5>
+                     <p class="mb-1">最终得分: <strong>${previousScoreData.final_score ?? 'N/A'}/100</strong></p>
+                     <hr class="my-2">
+                     <p class="mb-1 small">识别文本: <br><em>"${previousScoreData.recognized_text ?? '无记录'}"</em></p>
+                     <details class="small text-muted mt-2">
+                        <summary style="cursor: pointer; font-weight: bold;">详细指标</summary>
+                        <ul class="list-unstyled mb-0 mt-1">
+                             <li>准确率: ${previousScoreData.accuracy_score ?? 'N/A'}%</li>
+                             <li>语速 (词/秒): ${previousScoreData.speech_rate_wps ?? 'N/A'}</li>
+                             <li>流畅度: ${previousScoreData.fluency_score ?? 'N/A'}/100</li>
+                        </ul>
+                     </details>
+                 </div>
+             `;
+             scoreDisplayArea.innerHTML = scoreDetailsHtml;
+             scoreDisplayArea.classList.remove('hidden'); // 确保可见
+
+             // 如果有历史评分，并且有用户录音播放器，则显示“获取评分”按钮
+             const userAudioExists = audioPlaybackContainer?.querySelector('audio');
+             if (scoreRecordingBtn && userAudioExists) {
+                  scoreRecordingBtn.classList.remove('hidden');
+                  scoreRecordingBtn.disabled = false;
+                  console.log("Previous score and user audio exist, showing Get Score button.");
+             }
+
+        } else if (scoreDisplayArea) {
+            // 如果没有历史评分，检查是否有用户录音，有则显示评分按钮
+            const userAudioExists = audioPlaybackContainer?.querySelector('audio');
+            if (scoreRecordingBtn && userAudioExists) {
+                scoreRecordingBtn.classList.remove('hidden');
+                scoreRecordingBtn.disabled = false;
+                console.log("No previous score, but user audio exists, showing Get Score button.");
+                scoreDisplayArea.innerHTML = '<p class="text-muted small m-0">暂无评分记录，录音后可获取评分。</p>'; // 提示可以评分
+                scoreDisplayArea.classList.remove('hidden');
+            } else {
+                 console.log("No previous score and no previous user recording found.");
+                 // 可以保持 scoreDisplayArea 为空或隐藏
+                 // scoreDisplayArea.innerHTML = '<p class="text-muted small m-0">录音后可获取评分。</p>';
+            }
+        }
+        // === 结束加载之前的评分 ===
+
+        // --- 新增：为评分按钮添加事件监听器 ---
+        scoreRecordingBtn = document.getElementById('score-recording-btn'); // 再次获取确保存在
+        if (scoreRecordingBtn) {
+            scoreRecordingBtn.addEventListener('click', () => {
+                const lessonNumber = scoreRecordingBtn.dataset.lessonNumber;
+                if (lessonNumber) {
+                    console.log(`Score Recording button clicked for lesson ${lessonNumber}.`);
+                    triggerProcessingAndScoring(lessonNumber); // 调用评分函数
+                } else {
+                    console.error("Lesson number missing on score button.");
+                    if(window.quizLogic && window.quizLogic.showError) window.quizLogic.showError("无法获取课程编号以进行评分。");
+                }
+            });
+            console.log("Listener attached to #score-recording-btn.");
+        } else {
+             console.warn("#score-recording-btn not found for listener attachment.");
+        }
+        // ---------------------------------
 
     }); // --- End of DOMContentLoaded listener ---
 
@@ -330,7 +398,7 @@
                 recordButton.innerHTML = '<i class="bi bi-mic-fill"></i> 开始录音';
                 recordButton.classList.remove('btn-warning', 'btn-secondary');
                 recordButton.classList.add('btn-danger');
-                recordingStatus.textContent = '';
+                // recordingStatus.textContent = ''; // 保留之前的状态信息 (如 "录音已上传" 或错误)
                 recordButton.disabled = false;
                 break;
             case 'recording':
@@ -437,62 +505,79 @@
     } // --- End of initializeSpeechSynthesis ---
 
 
-    // ======================================
-    // === Recording Logic Initialization (顶层) ===
-    // ======================================
+    // --- 修改：Recording Logic Initialization ---
     function initializeRecordingLogic() {
-        console.log("lesson_text.html: Initializing Recording Logic...");
-        if (!recordButton || !recordingStatus || !audioPlaybackContainer) { console.warn("Recording elements missing (init stage)."); if(recordButton) recordButton.disabled = true; return; }
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) { recordingStatus.textContent = "浏览器不支持录音"; recordButton.disabled = true; return; }
+        console.log("Initializing Recording Logic...");
+        if (!recordButton || !recordingStatus || !audioPlaybackContainer) { /* ... */ return; }
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) { /* ... */ return; }
 
         recordButton.addEventListener('click', async () => {
             if (!isCurrentlyRecording) { // === Start Recording ===
-                console.log("Record button clicked: Start recording...");
+                console.log("Start recording clicked...");
                 stopPlaybackAndRecording(); updateRecordingUI('stopping');
+                // --- 获取评分按钮并隐藏 ---
+                 if (scoreRecordingBtn) scoreRecordingBtn.classList.add('hidden');
+                 // -------------------------
                 try {
-                    mediaStreamInstance = await navigator.mediaDevices.getUserMedia({ audio: true }); console.log("Mic access granted.");
-                    const options = { mimeType: 'audio/webm' }; if (!MediaRecorder.isTypeSupported(options.mimeType)) {options.mimeType='audio/ogg; codecs=opus';} if (!MediaRecorder.isTypeSupported(options.mimeType)) {options.mimeType='';} const recOpts=options.mimeType?{mimeType:options.mimeType}:undefined; console.log("Using options:", recOpts||"Default");
+                    mediaStreamInstance = await navigator.mediaDevices.getUserMedia({ audio: true }); /* ... */
+                    const options = { mimeType: 'audio/webm' }; /* ... MIME type logic ... */ const recOpts=options.mimeType?{mimeType:options.mimeType}:undefined;
                     mediaRecorderInstance = new MediaRecorder(mediaStreamInstance, recOpts); recordedAudioChunks = [];
                     mediaRecorderInstance.ondataavailable = event => { if (event.data.size > 0) recordedAudioChunks.push(event.data); };
-                    // --- onstop Handler ---
-                    mediaRecorderInstance.onstop = async () => {
-                        console.log("Recording stopped. Chunks:", recordedAudioChunks.length);
-                        const stream = mediaStreamInstance; if (stream) stream.getTracks().forEach(t => t.stop()); mediaStreamInstance = null; console.log("Mic stream stopped.");
-                        updateRecordingUI('stopping'); // Keep showing processing during this handler
 
-                        if (recordedAudioChunks.length === 0) { console.warn("No data recorded."); recordingStatus.textContent = "录音数据为空。"; updateRecordingUI('idle'); return; }
-                        let audioBlob = null, successLocal = false, savedToServer = false;
+                    // --- 修改 onstop ---
+                    mediaRecorderInstance.onstop = async () => {
+                        console.log("Rec stopped. Chunks:", recordedAudioChunks.length);
+                        const stream = mediaStreamInstance; if (stream) stream.getTracks().forEach(t => t.stop()); mediaStreamInstance = null; console.log("Mic stream stopped.");
+                        updateRecordingUI('stopping');
+
+                        if (recordedAudioChunks.length === 0) { console.warn("No data."); recordingStatus.textContent = "录音数据为空。"; updateRecordingUI('idle'); return; }
+                        let audioBlob = null, successLocal = false, savedToServer = false, lessonNumberForUpload = null;
                         try {
-                            console.log("Creating Blob..."); const blobOpts = mediaRecorderInstance.mimeType ? {type: mediaRecorderInstance.mimeType}:{}; audioBlob = new Blob(recordedAudioChunks, blobOpts); console.log("Blob created:", audioBlob.size, audioBlob.type); if (audioBlob.size === 0) throw new Error("Blob size 0.");
+                            console.log("Creating Blob..."); const blobOpts = mediaRecorderInstance.mimeType ? {type: mediaRecorderInstance.mimeType}:{}; audioBlob = new Blob(recordedAudioChunks, blobOpts); if (audioBlob.size === 0) throw new Error("Blob size 0."); console.log("Blob created:", audioBlob.size, audioBlob.type);
                             console.log("Creating Object URL..."); const audioUrl = URL.createObjectURL(audioBlob); console.log("Obj URL created.");
                             if (!audioPlaybackContainer) throw new Error("Playback container missing!"); console.log("Creating audio element...");
                             const audioElement = document.createElement('audio'); audioElement.controls = true; audioElement.src = audioUrl; audioElement.title="你的录音回放"; audioElement.classList.add("w-100","mt-2");
                             audioElement.addEventListener('play', () => { handleUserAudioPlay(audioElement); }); audioElement.addEventListener('pause', handleAudioStop); audioElement.addEventListener('ended', handleAudioStop);
                             console.log("Clearing playback container..."); audioPlaybackContainer.innerHTML = ''; console.log("Appending audio element..."); audioPlaybackContainer.appendChild(audioElement); console.log("Audio element appended."); successLocal = true;
+
                             // --- Upload Logic ---
-                            const lessonNumber = startLessonQuizBtn?.dataset.lessonNumber || recordButton?.dataset.lessonNumber || "{{ lesson.lesson_number }}";
-                            if (lessonNumber && audioBlob) {
-                                console.log(`Uploading for lesson ${lessonNumber}...`); recordingStatus.textContent = "正在上传录音...";
-                                const formData = new FormData(); let filename = `lesson_${lessonNumber}_rec.webm`; const mime=audioBlob.type.split(';')[0]; if(mime==='audio/ogg')filename=`lesson_${lessonNumber}_rec.ogg`; else if(mime==='audio/wav')filename=`lesson_${lessonNumber}_rec.wav`; formData.append('audio_data', audioBlob, filename);
-                                const csrf = document.querySelector('meta[name="csrf-token"]')?.content; const headers = {'Accept':'application/json'}; if(csrf)headers['X-CSRFToken']=csrf; else console.warn("CSRF token missing for upload.");
+                            lessonNumberForUpload = startLessonQuizBtn?.dataset.lessonNumber || recordButton?.dataset.lessonNumber || "{{ lesson.lesson_number }}";
+                            if (lessonNumberForUpload && audioBlob) {
+                                console.log(`Uploading for lesson ${lessonNumberForUpload}...`); recordingStatus.textContent = "正在上传录音...";
+                                const formData = new FormData(); let filename = `lesson_${lessonNumberForUpload}_rec.webm`; const mime=audioBlob.type.split(';')[0]; if(mime==='audio/ogg')filename=`lesson_${lessonNumberForUpload}_rec.ogg`; else if(mime==='audio/wav')filename=`lesson_${lessonNumberForUpload}_rec.wav`; formData.append('audio_data', audioBlob, filename);
+                                const csrf = document.querySelector('meta[name="csrf-token"]')?.content; const headers = {'Accept':'application/json'}; if(csrf)headers['X-CSRFToken']=csrf;
                                 try {
-                                    const resp = await fetch(`/api/lesson/${lessonNumber}/upload_recording`, { method: 'POST', headers: headers, body: formData }); console.log("Upload status:", resp.status);
+                                    const resp = await fetch(`/api/lesson/${lessonNumberForUpload}/upload_recording`, { method: 'POST', headers: headers, body: formData }); console.log("Upload status:", resp.status);
                                     if (!resp.ok) { let eMsg=`Upload failed (${resp.status})`; try{const d=await resp.json(); eMsg=d.error||eMsg;}catch(e){} throw new Error(eMsg); }
                                     const res = await resp.json(); if (res.success) { console.log("Upload OK:", res.message); recordingStatus.textContent = "录音已上传"; savedToServer = true; } else { throw new Error(res.error || "Upload failed (backend)"); }
                                 } catch (upErr) { console.error("Upload error:", upErr); recordingStatus.textContent = `上传失败: ${upErr.message}`; }
                             } else { console.warn("Cannot upload: no lesson# or blob."); recordingStatus.textContent = "未上传:缺少信息"; }
                         } catch (procErr) { console.error("Local processing error:", procErr); recordingStatus.textContent = `处理失败: ${procErr.message}`; successLocal = false; }
-                        finally { recordedAudioChunks = []; updateRecordingUI('idle'); console.log("Finally: UI idle, chunks cleared."); } // Always reset UI button state
+                        finally {
+                            recordedAudioChunks = []; updateRecordingUI('idle'); console.log("Finally: UI idle, chunks cleared.");
+                            // --- 修改：不再自动触发评分，改为显示评分按钮 ---
+                            if (successLocal && lessonNumberForUpload) { // 只要本地播放器成功创建就显示按钮
+                                if (scoreRecordingBtn) {
+                                    scoreRecordingBtn.classList.remove('hidden'); // 显示评分按钮
+                                    scoreRecordingBtn.disabled = false; // 确保可用
+                                    console.log("Get Score button shown.");
+                                } else {
+                                     console.warn("Score recording button not found to show.");
+                                }
+                                // 可以清除旧的评分显示（如果存在）
+                                // if(scoreDisplayArea) scoreDisplayArea.innerHTML = '';
+                            }
+                            // ------------------------------------------
+                        }
                     }; // --- End onstop ---
-                    mediaRecorderInstance.onerror = event => { console.error("Recorder error:", event.error); recordingStatus.textContent=`录音错误: ${event.error.name}`; updateRecordingUI('unavailable'); if(mediaStreamInstance)mediaStreamInstance.getTracks().forEach(t=>t.stop());mediaStreamInstance=null; setTimeout(()=>updateRecordingUI('idle'),3000); };
-                    mediaRecorderInstance.start(); console.log("Recording started successfully."); updateRecordingUI('recording'); // Update UI
-                } catch (err) { console.error('Mic/start failed:', err); recordingStatus.textContent = `无法访问麦克风: ${err.name}`; updateRecordingUI('unavailable'); if(mediaStreamInstance){mediaStreamInstance.getTracks().forEach(t=>t.stop());mediaStreamInstance=null;} setTimeout(() => updateRecordingUI('idle'), 3000); }
+                    mediaRecorderInstance.onerror = event => { /* ... (保持不变) ... */ };
+                    mediaRecorderInstance.start(); updateRecordingUI('recording');
+                } catch (err) { /* ... (保持不变) ... */ }
             } else { // === Stop Recording ===
-                console.log("Stop Recording button clicked."); stopRecording();
+                console.log("Stop button clicked."); stopRecording();
             }
         });
-        updateRecordingUI('idle'); // Set initial state
-        console.log("Recording logic initialized and listener attached.");
+        updateRecordingUI('idle'); console.log("Recording logic initialized.");
     } // --- End of initializeRecordingLogic ---
 
 
@@ -500,68 +585,65 @@
     // === Lesson Quiz Logic Initialization (顶层) ===
     // ============================================
     function initializeLessonQuizLogic() {
-         console.log("lesson_text.html: Running initializeLessonQuizLogic...");
-         // --- Check dependencies (window.quizLogic) ---
-         if (typeof window.quizLogic === 'undefined' || !window.quizLogic.resetQuizUI || !window.quizLogic.showLoading || !window.quizLogic.showError || !window.quizLogic.displayQuestions) {
-            console.error("CRITICAL - window.quizLogic or required functions not found!");
+        console.log("lesson_text.html: Running initializeLessonQuizLogic...");
+        // Check dependencies (window.quizLogic)
+        if (typeof window.quizLogic === 'undefined' || !window.quizLogic.resetQuizUI || !window.quizLogic.showLoading || !window.quizLogic.showError || !window.quizLogic.displayQuestions) {
+            console.error("CRITICAL - window.quizLogic or required functions not found! Quiz functionality disabled.");
             alert("加载测验组件失败!"); if(startLessonQuizBtn) startLessonQuizBtn.disabled = true; return;
-         }
-         console.log("window.quizLogic confirmed.");
+        }
+        console.log("window.quizLogic confirmed.");
 
-         // --- startLessonQuizLocal function ---
-         async function startLessonQuizLocal(lessonNumber) {
-             if (!lessonNumber) { console.error("No lesson number."); window.quizLogic.showError('无法获取课程编号。'); return; }
-             console.log(`[1] Starting quiz L${lessonNumber}...`);
-             stopPlaybackAndRecording(); // Stop media before starting quiz
-             window.quizLogic.resetQuizUI(); window.quizLogic.showLoading(true); if (startLessonQuizBtn) startLessonQuizBtn.disabled = true;
-             const numQ = 999; const qType = 'cn_to_en';
-             // Ensure global context exists before setting properties
-             if (typeof window.quizContext !== 'object' || window.quizContext === null) window.quizContext = { lesson_ids: [], quiz_type: "", question_ids: [] };
-             window.quizContext.lesson_ids = [parseInt(lessonNumber)]; window.quizContext.quiz_type = qType; window.quizContext.question_ids = [];
-             console.log("[2] Global quizContext set:", JSON.stringify(window.quizContext));
-             try {
-                 const url = `/api/quiz?lessons=${lessonNumber}&count=${numQ}&type=${qType}`; console.log("[3] Fetching:", url);
-                 const resp = await fetch(url); console.log("[4] Status:", resp.status, "OK:", resp.ok);
-                 if (!resp.ok) { let eMsg=`Load failed (${resp.status})`; try{const t=await resp.text(); if(resp.headers.get("content-type")?.includes("json"))eMsg=JSON.parse(t).error||eMsg; else eMsg+=`: ${t.slice(0,100)}`;}catch(e){} throw new Error(eMsg); }
-                 console.log("[5b] Parsing JSON..."); const data = await resp.json(); console.log(`[6] Fetched data:`, data);
-                 if (!data || !Array.isArray(data) || data.length === 0) { console.error("[7] Validation Failed!"); window.quizLogic.showError(`未能加载L${lessonNumber}词汇题`); if (startLessonQuizBtn) startLessonQuizBtn.disabled = false; window.quizLogic.resetQuizStateVariables(); return; }
-                 window.currentQuizData = data; console.log("[8] Global currentQuizData SET");
-                 window.quizContext.question_ids = data.map(q => q.id); console.log("[9] Context Q_IDs UPDATED");
-                 console.log("[10] Calling displayQuestions..."); window.quizLogic.displayQuestions(data);
-             } catch (error) { console.error('[11] Error:', error); window.quizLogic.showError(`开始测试失败: ${error.message}`); if (startLessonQuizBtn) startLessonQuizBtn.disabled = false; window.quizLogic.resetQuizStateVariables(); }
-             finally { console.log("[12] finally."); window.quizLogic.showLoading(false); }
-         } // --- End startLessonQuizLocal ---
+        // --- startLessonQuizLocal function ---
+        async function startLessonQuizLocal(lessonNumber) {
+            if (!lessonNumber) { console.error("No lesson number."); window.quizLogic.showError('无法获取课程编号。'); return; }
+            console.log(`[1] Starting quiz L${lessonNumber}...`);
+            stopPlaybackAndRecording(); // Stop media before starting quiz
+            window.quizLogic.resetQuizUI(); window.quizLogic.showLoading(true); if (startLessonQuizBtn) startLessonQuizBtn.disabled = true;
+            const numQ = 999; const qType = 'cn_to_en';
+            // Ensure global context exists before setting properties
+            if (typeof window.quizContext !== 'object' || window.quizContext === null) window.quizContext = { lesson_ids: [], quiz_type: "", question_ids: [] };
+            window.quizContext.lesson_ids = [parseInt(lessonNumber)]; window.quizContext.quiz_type = qType; window.quizContext.question_ids = [];
+            console.log("[2] Global quizContext set:", JSON.stringify(window.quizContext));
+            try {
+                const url = `/api/quiz?lessons=${lessonNumber}&count=${numQ}&type=${qType}`; console.log("[3] Fetching:", url);
+                const resp = await fetch(url); console.log("[4] Status:", resp.status, "OK:", resp.ok);
+                if (!resp.ok) { let eMsg=`Load failed (${resp.status})`; try{const t=await resp.text(); if(resp.headers.get("content-type")?.includes("json"))eMsg=JSON.parse(t).error||eMsg; else eMsg+=`: ${t.slice(0,100)}`;}catch(e){} throw new Error(eMsg); }
+                console.log("[5b] Parsing JSON..."); const data = await resp.json(); console.log(`[6] Fetched data:`, data);
+                if (!data || !Array.isArray(data) || data.length === 0) { console.error("[7] Validation Failed!"); window.quizLogic.showError(`未能加载L${lessonNumber}词汇题`); if (startLessonQuizBtn) startLessonQuizBtn.disabled = false; window.quizLogic.resetQuizStateVariables(); return; }
+                window.currentQuizData = data; console.log("[8] Global currentQuizData SET");
+                window.quizContext.question_ids = data.map(q => q.id); console.log("[9] Context Q_IDs UPDATED");
+                console.log("[10] Calling displayQuestions..."); window.quizLogic.displayQuestions(data);
+            } catch (error) { console.error('[11] Error:', error); window.quizLogic.showError(`开始测试失败: ${error.message}`); if (startLessonQuizBtn) startLessonQuizBtn.disabled = false; window.quizLogic.resetQuizStateVariables(); }
+            finally { console.log("[12] finally."); window.quizLogic.showLoading(false); }
+        } // --- End startLessonQuizLocal ---
 
-         // --- Function to restart quiz ---
-         function restartLessonQuizLocal() {
-             console.log("Restarting quiz...");
-             window.quizLogic.resetQuizUI(); // Use global reset
-             // Re-fetch the restart button potentially, as it might have been re-rendered or was initially null
-             const currentRestartBtn = document.getElementById('restart-quiz-btn');
-             if (startLessonQuizBtn) { startLessonQuizBtn.disabled = false; }
-             // Scroll to quiz options or start button after reset
-             const quizOptionsSection = document.getElementById('quiz-options-section'); // Assuming this ID exists if coming from index
-             const targetScrollElement = quizOptionsSection || startLessonQuizBtn;
-             if(targetScrollElement) targetScrollElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-         }
+        // --- Function to restart quiz ---
+        function restartLessonQuizLocal() {
+            console.log("Restarting quiz...");
+            window.quizLogic.resetQuizUI(); // Use global reset
+            // Re-fetch the restart button potentially, as it might have been re-rendered or was initially null
+            const currentRestartBtn = document.getElementById('restart-quiz-btn'); // Might be null
+            if (startLessonQuizBtn) { startLessonQuizBtn.disabled = false; }
+            // Scroll to quiz options or start button after reset
+            const targetScrollElement = startLessonQuizBtn || document.getElementById('quiz-area'); // Scroll to start button or quiz area
+            if(targetScrollElement) targetScrollElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
 
-         // --- Attach Listeners ---
-         if (startLessonQuizBtn) { startLessonQuizBtn.addEventListener('click', () => { const lNum = startLessonQuizBtn.dataset.lessonNumber; startLessonQuizLocal(lNum); }); console.log("Listener attached to #start-lesson-quiz-btn."); }
-         // Use event delegation for the restart button as it's inside the results area which might be rebuilt
-         const resultsAreaForDelegation = document.getElementById('results-area'); // Get results area reference
-         if(resultsAreaForDelegation){
-             resultsAreaForDelegation.addEventListener('click', (event) => {
-                  if (event.target && event.target.id === 'restart-quiz-btn') {
-                       restartLessonQuizLocal();
-                  }
-             });
-             console.log("Event listener attached to resultsArea for #restart-quiz-btn delegation.");
-         } else {
-              console.warn("#results-area not found for restart button delegation.");
-         }
-         // if (restartQuizBtn) { restartQuizBtn.addEventListener('click', restartLessonQuizLocal); console.log("Direct listener attached to #restart-quiz-btn."); } // Direct attachment might fail if hidden initially
-         // else { console.warn("#restart-quiz-btn not found for direct listener attachment."); }
-         console.log("lesson_text.html: Submit listener handled by quiz_logic.js.");
+        // --- Attach Listeners ---
+        if (startLessonQuizBtn) { startLessonQuizBtn.addEventListener('click', () => { const lNum = startLessonQuizBtn.dataset.lessonNumber; startLessonQuizLocal(lNum); }); console.log("Listener attached to #start-lesson-quiz-btn."); }
+        // Use event delegation for the restart button as it's inside the results area which might be rebuilt
+        const resultsAreaForDelegation = document.getElementById('results-area'); // Get results area reference
+        if(resultsAreaForDelegation){
+            resultsAreaForDelegation.addEventListener('click', (event) => {
+                 if (event.target && event.target.id === 'restart-quiz-btn') {
+                      restartLessonQuizLocal();
+                 }
+            });
+            console.log("Event listener attached to resultsArea for #restart-quiz-btn delegation.");
+        } else {
+             console.warn("#results-area not found for restart button delegation.");
+        }
+        console.log("lesson_text.html: Submit listener handled by quiz_logic.js.");
     } // --- End of initializeLessonQuizLogic ---
 
 
@@ -574,7 +656,7 @@
          let stoppedSomething = false;
          // Stop any currently playing audio element
          if (currentAudioElement && typeof currentAudioElement.pause === 'function' && !currentAudioElement.paused) { console.log("Stopping current global audio element:", currentAudioElement.src.substring(0,50)+"..."); currentAudioElement.pause(); stoppedSomething = true; currentAudioElement = null; }
-         else { /* Check specific elements just in case */ if (preGeneratedAudio && !preGeneratedAudio.paused) { preGeneratedAudio.pause(); stoppedSomething = true;} const userAudio = audioPlaybackContainer?.querySelector('audio'); if(userAudio && !userAudio.paused) { userAudio.pause(); stoppedSomething = true;} }
+         else { /* Check specific elements */ if (preGeneratedAudio && !preGeneratedAudio.paused) { preGeneratedAudio.pause(); stoppedSomething = true;} const userAudio = audioPlaybackContainer?.querySelector('audio'); if(userAudio && !userAudio.paused) { userAudio.pause(); stoppedSomething = true;} }
          // Stop Speech Synthesis
          if (window.speechSynthesis && window.speechSynthesis.speaking) { console.log("Stopping speech synthesis."); window.speechSynthesis.cancel(); isCurrentlySpeaking = false; if(speakButton) speakButton.innerHTML = '<i class="bi bi-play-fill"></i> 朗读'; stoppedSomething = true; }
          // Stop Recording
@@ -583,18 +665,36 @@
      }
 
     /** Stops all OTHER media playback/recording/speaking except the element passed as current. */
-    function stopOtherMedia(currentMediaElement = null) {
+    function stopOtherMedia(currentMediaElement = null) { // <--- 参数名是 currentMediaElement
         console.log("Helper: stopOtherMedia called, current element:", currentMediaElement ? currentMediaElement.tagName : 'null');
-         // Stop pre-generated audio
-         if (preGeneratedAudio && currentMediaElement !== preGeneratedAudio && !preGeneratedAudio.paused) { console.log("Pausing pre-generated audio."); preGeneratedAudio.pause(); if(currentAudioElement === preGeneratedAudio) currentAudioElement = null; }
-         // Stop user recording playback
+         // Stop pre-generated audio if it's not the current one
+         // === 修改：使用正确的参数名 currentMediaElement ===
+         if (preGeneratedAudio && currentMediaElement !== preGeneratedAudio && !preGeneratedAudio.paused) {
+             console.log("Pausing pre-generated audio.");
+             preGeneratedAudio.pause();
+             if(currentAudioElement === preGeneratedAudio) currentAudioElement = null; // 如果全局标记是它，清除
+         }
+         // Stop user recording playback if it's not the current one
          const userAudio = audioPlaybackContainer ? audioPlaybackContainer.querySelector('audio') : null;
-         if(userAudio && currentMediaElement !== userAudio && !userAudio.paused) { console.log("Pausing user recording playback."); userAudio.pause(); if(currentAudioElement === userAudio) currentAudioElement = null; }
-         // Stop TTS
-         if (window.speechSynthesis && window.speechSynthesis.speaking) { console.log("Stopping speech synthesis."); window.speechSynthesis.cancel(); isCurrentlySpeaking = false; if(speakButton) speakButton.innerHTML = '<i class="bi bi-play-fill"></i> 朗读'; }
-         // Stop Recording
-         if (isCurrentlyRecording) { console.log("Stopping ongoing recording."); stopRecording(); } // Call helper
-    }
+         // === 修改：使用正确的参数名 currentMediaElement ===
+         if(userAudio && currentMediaElement !== userAudio && !userAudio.paused) {
+             console.log("Pausing user recording playback.");
+             userAudio.pause();
+             if(currentAudioElement === userAudio) currentAudioElement = null; // 如果全局标记是它，清除
+         }
+         // Stop TTS (TTS 不太可能是 currentMediaElement，所以通常总是停止)
+         if (window.speechSynthesis && window.speechSynthesis.speaking) {
+             console.log("Stopping speech synthesis.");
+             window.speechSynthesis.cancel();
+             isCurrentlySpeaking = false;
+             if(speakButton) speakButton.innerHTML = '<i class="bi bi-play-fill"></i> 朗读';
+         }
+         // Stop Recording (Recording 按钮不是 currentMediaElement)
+         if (isCurrentlyRecording) {
+             console.log("Stopping ongoing recording.");
+             stopRecording(); // 调用辅助函数
+         }
+    } // --- End of stopOtherMedia ---
 
      /** Auxiliary function to specifically stop the recorder and update UI. */
      function stopRecording() {
@@ -615,13 +715,13 @@
     function handlePreGeneratedAudioPlay() {
          console.log("Pre-generated audio playback started.");
          currentAudioElement = preGeneratedAudio; // Mark as current
-         stopOtherMedia(preGeneratedAudio); // Stop others
+         stopOtherMedia(preGeneratedAudio); // <--- 传递正确的参数
     }
     /** Handles 'play' event for the dynamically created user audio element. */
-    function handleUserAudioPlay(audioElement) {
+    function handleUserAudioPlay(audioElement) { // <--- 参数名是 audioElement
          console.log("User recording playback started.");
          currentAudioElement = audioElement; // Mark as current
-         stopOtherMedia(audioElement); // Stop others
+         stopOtherMedia(audioElement); // <--- 传递正确的参数
     }
     /** Handles 'pause' and 'ended' events for any audio element. */
     function handleAudioStop(event) {
@@ -630,6 +730,105 @@
               currentAudioElement = null; // Clear mark
          }
     }
+
+    async function triggerProcessingAndScoring(lessonNumber) {
+        const statusSpan = document.getElementById('recording-status');
+        const scoreDisplayArea = document.getElementById('user-recording-score');
+        const localScoreRecordingBtn = document.getElementById('score-recording-btn'); // 获取按钮引用
+
+        // --- 1. 初始化状态 ---
+        if (statusSpan) statusSpan.textContent = "正在请求评分...";
+        if (localScoreRecordingBtn) localScoreRecordingBtn.disabled = true; // 禁用按钮
+        if (window.quizLogic && window.quizLogic.showLoading) window.quizLogic.showLoading(true);
+        hideError(); // 隐藏之前的普通错误（如果 quizLogic 提供了 hideError）
+
+        let response = null; // 将 response 提升作用域，并初始化为 null
+        let result = null;   // 将 result 提升作用域，并初始化为 null
+
+        try {
+            console.log(`Triggering processing for lesson ${lessonNumber}`);
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            const headers = { 'Accept': 'application/json' };
+            if (csrfToken) { headers['X-CSRFToken'] = csrfToken; }
+
+            // --- 2. API 调用 ---
+            response = await fetch(`/api/lesson/${lessonNumber}/process_recording`, { // 赋值给外部的 response
+                method: 'POST',
+                headers: headers
+            });
+            console.log("Scoring API Response Status:", response.status, "OK:", response.ok);
+
+            // --- 3. 尝试解析 JSON (无论是否 OK，都尝试解析，错误信息可能在 body 里) ---
+            try {
+                 result = await response.json(); // 赋值给外部的 result
+                 console.log("API Response Body Parsed:", result);
+            } catch (jsonError) {
+                 console.error("Failed to parse API response as JSON:", jsonError);
+                 // 如果解析 JSON 失败，但状态码是 OK 的，这本身就是个问题
+                 if (response.ok) {
+                      throw new Error("服务器响应成功，但返回内容不是有效的JSON格式。");
+                 }
+                 // 如果状态码不是 OK，错误信息在下面处理
+            }
+
+
+            // --- 4. 检查 HTTP 状态和业务逻辑成功标志 ---
+            if (!response.ok || (result && result.success === false)) { // 检查 HTTP 错误 或 后端明确返回 success:false
+                 // 从 result 中提取错误，否则构造一个
+                 const errorMsg = result?.error || `处理失败 (${response.status} ${response.statusText || ''})`;
+                 throw new Error(errorMsg); // 抛出错误给 catch 块处理
+            }
+
+            // --- 5. 处理成功结果 ---
+            console.log("Processing & Scoring Result:", result);
+            // --- 在页面上显示评分结果 ---
+            let scoreDetailsHtml = `
+                 <div class="alert alert-info alert-dismissible fade show mt-3" role="alert">
+                     <h5 class="alert-heading mb-2">跟读评分结果</h5>
+                     <p class="mb-1">最终得分: <strong>${result.final_score ?? 'N/A'}/100</strong></p>
+                     <hr class="my-2">
+                     <p class="mb-1 small">识别文本: <br><em>"${result.recognized_text ?? '未能识别'}"</em></p>
+                     <details class="small text-muted mt-2">
+                        <summary style="cursor: pointer; font-weight: bold;">详细指标</summary>
+                        <ul class="list-unstyled mb-0 mt-1">
+                             <li>准确率: ${result.accuracy ?? 'N/A'}%</li>
+                             <li>语速 (词/秒): ${result.speech_rate_wps ?? 'N/A'}</li>
+                             <li>流畅度: ${result.fluency_score ?? 'N/A'}/100</li>
+                        </ul>
+                     </details>
+                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                 </div>
+             `;
+            if(scoreDisplayArea) {
+                 scoreDisplayArea.innerHTML = scoreDetailsHtml;
+                 scoreDisplayArea.classList.remove('hidden');
+                 console.log("Score displayed in #user-recording-score area.");
+            } else { console.warn("Score display area not found."); }
+            if (statusSpan) { statusSpan.textContent = `评分: ${result.final_score ?? 'N/A'}/100`; statusSpan.classList.remove('text-muted', 'text-danger'); statusSpan.classList.add('text-success'); }
+            // 成功后保持按钮禁用或隐藏？根据你的需求决定
+            // if (localScoreRecordingBtn) localScoreRecordingBtn.classList.add('hidden');
+
+        } catch (error) { // --- 6. 统一错误处理 ---
+             console.error("Error in triggerProcessingAndScoring:", error);
+             const displayErrorMessage = `评分出错: ${error.message}`;
+             if (statusSpan) { statusSpan.textContent = displayErrorMessage; statusSpan.classList.remove('text-success'); statusSpan.classList.add('text-danger', 'fw-bold'); }
+             // 可选：调用全局 showError
+             if(window.quizLogic && window.quizLogic.showError) {
+                  // 调用全局 showError 时可能不需要前缀 "评分出错:"
+                  window.quizLogic.showError(error.message);
+             } else {
+                  alert(displayErrorMessage); // Fallback
+             }
+             // 出错时重新启用评分按钮，允许重试
+             if (localScoreRecordingBtn) localScoreRecordingBtn.disabled = false;
+
+        } finally { // --- 7. 最终处理 ---
+             // 确保 loading 总是隐藏
+             if(window.quizLogic && window.quizLogic.showLoading) window.quizLogic.showLoading(false);
+             console.log("Processing/Scoring trigger finished.");
+             // 不再需要检查 response 是否 OK 来决定是否启用按钮，catch 块会处理错误情况
+        }
+    } // --- End of triggerProcessingAndScoring ---
 
 </script>
 {% endblock %}

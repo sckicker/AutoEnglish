@@ -12,7 +12,7 @@ from urllib.parse import urlsplit
 
 # --- Import from local package ---
 from . import db
-from .models import Vocabulary, Lesson, User, QuizAttempt, WrongAnswer, UserFavoriteVocabulary
+from .models import Vocabulary, Lesson, User, QuizAttempt, WrongAnswer, UserFavoriteVocabulary, PronunciationScore
 from .forms import LoginForm, RegistrationForm
 from .pdf_parser import process_nce_pdf
 from .decorators import admin_required, root_admin_required # <-- 从这里只导入你自定义的装饰器
@@ -21,6 +21,7 @@ from flask import jsonify, request, abort, current_app, flash, redirect, url_for
 from flask_login import current_user, login_required
 from sqlalchemy.exc import IntegrityError # <--- 导入 IntegrityError
 from werkzeug.utils import secure_filename # 用于基本的安全检查（虽然我们自己生成文件名）
+from .scoring_utils import evaluate_audio_recording # 导入主评估函数
 
 # --- Define allowed categories (can be moved to config.py later) ---
 ALLOWED_WRONG_ANSWER_CATEGORIES = ["重点复习", "易混淆", "拼写困难", "用法模糊", "暂不复习"]
@@ -120,12 +121,31 @@ def view_lesson(lesson_number):
         current_app.logger.warning("USER_RECORDINGS_BASE_FOLDER not configured.")
     # --- 结束修改 ---
 
+    # --- 新增：查找用户之前的评分记录 ---
+    previous_score_data = None
+    score_record = PronunciationScore.query.filter_by(user_id=current_user.id, lesson_number=lesson_number).first()
+    if score_record:
+        previous_score_data = {
+            'final_score': score_record.final_score,
+            'accuracy_score': score_record.accuracy_score,
+            'fluency_score': score_record.fluency_score,
+            'speed_score': score_record.speed_score,
+            'recognized_text': score_record.recognized_text,
+            'wer': score_record.wer,
+            'speech_rate_wps': score_record.speech_rate_wps,
+            'timestamp': score_record.timestamp.strftime(
+                '%Y-%m-%d %H:%M:%S') + ' UTC' if score_record.timestamp else None
+        }
+        current_app.logger.info(f"Found previous score record for user {current_user.id}, lesson {lesson_number}.")
+    # --- 结束查找评分 ---
+
     now = datetime.utcnow()
     return render_template('lesson_text.html',
                            lesson=lesson_data,
                            current_time=now,
-                           audio_url=pregen_audio_url, # 预生成音频 URL
-                           user_recording_audio_url=user_recording_url) # 用户录音 URL
+                           audio_url=pregen_audio_url,
+                           user_recording_audio_url=user_recording_url,
+                           previous_score=previous_score_data)  # <--- 传递评分数据
 
 
 # === 新增：提供预生成音频文件的路由 ===
@@ -955,3 +975,89 @@ def get_user_recording(user_id, lesson_number):
     else:
          current_app.logger.warning(f"User recording not found for user {user_id}, lesson {lesson_number} in {user_specific_folder}")
          return jsonify({"error": "Recording not found"}), 404
+
+
+# --- 修改：处理和评分 API (由按钮触发) ---
+@current_app.route('/api/lesson/<int:lesson_number>/process_recording', methods=['POST']) # 保持 POST
+@login_required
+def process_user_recording(lesson_number):
+    """处理指定课程的用户录音，进行 STT 和评分，并将结果存入数据库。"""
+    user_id = current_user.id
+    current_app.logger.info(f"Processing recording request for lesson {lesson_number}, user {user_id}")
+
+    # --- 1. 找到录音文件 (逻辑不变) ---
+    base_folder = current_app.config.get('USER_RECORDINGS_BASE_FOLDER')
+    if not base_folder: return jsonify({'success': False, 'error': '录音文件夹未配置'}), 500
+    user_specific_folder = os.path.join(base_folder, f"user_{user_id}")
+    possible_extensions = current_app.config.get('PREGENERATED_AUDIO_EXTENSIONS', []) + ['.webm', '.ogg', '.wav', '.mp3', '.m4a', '.aac']
+    found_filepath = None; filename_only = None
+    for ext in set(possible_extensions):
+         filename = f"lesson_{lesson_number}{ext}"
+         filepath = os.path.join(user_specific_folder, filename)
+         if os.path.exists(filepath): found_filepath = filepath; filename_only = filename; break
+    if not found_filepath: return jsonify({'success': False, 'error': '找不到对应的录音文件'}), 404
+
+    # --- 2. 获取标准课文 (逻辑不变) ---
+    lesson = Lesson.query.filter_by(lesson_number=lesson_number, source_book=2).first()
+    if not lesson or not lesson.text_en: return jsonify({'success': False, 'error': '找不到标准课文'}), 404
+    standard_text = lesson.text_en
+
+    # --- 3. 调用评分模块 (逻辑不变) ---
+    try:
+        evaluation_result = evaluate_audio_recording(found_filepath, standard_text)
+    except FileNotFoundError as e: return jsonify({'success': False, 'error': f'评估失败：找不到文件 - {e}'}), 404
+    except ValueError as e: return jsonify({'success': False, 'error': f'评估失败：输入无效 - {e}'}), 400
+    except Exception as e: current_app.logger.error(f"Crit err processing {found_filepath}: {e}", exc_info=True); return jsonify({'success': False, 'error': f'处理或评分时发生内部错误'}), 500
+
+    # --- 4. 保存/更新评分记录到数据库 ---
+    try:
+        # 查找是否已存在该用户该课程的评分记录
+        score_record = PronunciationScore.query.filter_by(user_id=user_id, lesson_number=lesson_number).first()
+
+        if score_record:
+            # 如果存在，则更新记录
+            current_app.logger.info(f"Updating existing score record for user {user_id}, lesson {lesson_number}")
+            score_record.final_score = evaluation_result.get('final_score')
+            score_record.accuracy_score = evaluation_result.get('accuracy')
+            score_record.fluency_score = evaluation_result.get('fluency_score')
+            score_record.speed_score = evaluation_result.get('speed_score') # 需要评分函数返回
+            score_record.recognized_text = evaluation_result.get('recognized_text')
+            score_record.wer = evaluation_result.get('wer')
+            score_record.speech_rate_wps = evaluation_result.get('speech_rate_wps')
+            score_record.timestamp = datetime.utcnow() # 更新时间戳
+        else:
+            # 如果不存在，则创建新记录
+            current_app.logger.info(f"Creating new score record for user {user_id}, lesson {lesson_number}")
+            score_record = PronunciationScore(
+                user_id=user_id,
+                lesson_number=lesson_number,
+                final_score = evaluation_result.get('final_score'),
+                accuracy_score = evaluation_result.get('accuracy'),
+                fluency_score = evaluation_result.get('fluency_score'),
+                speed_score = evaluation_result.get('speed_score'),
+                recognized_text = evaluation_result.get('recognized_text'),
+                wer = evaluation_result.get('wer'),
+                speech_rate_wps = evaluation_result.get('speech_rate_wps'),
+                # timestamp 使用 default
+            )
+            db.session.add(score_record)
+
+        db.session.commit()
+        current_app.logger.info("Pronunciation score saved/updated successfully.")
+
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error saving pronunciation score to DB: {e}", exc_info=True)
+        # 虽然评分计算成功了，但保存失败，也需要告知前端
+        return jsonify({
+            'success': False, # 标记操作未完全成功
+            'error': '评分计算完成，但保存结果时出错。',
+            **evaluation_result # 仍然返回评分结果供查看
+            }), 500 # 返回服务器错误
+
+    # --- 5. 返回包含详细结果的 JSON ---
+    return jsonify({
+        'success': True,
+        'message': '评分完成并已保存。(Scoring complete and saved)',
+        **evaluation_result
+    }), 200
